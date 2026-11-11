@@ -33,7 +33,7 @@ return view.extend({
   this.failures = {};
   this.body = E('div', { 'class': 'zc-dashboard-grid' });
   this.status = E('span', { 'class': 'zc-refresh-status', 'role': 'status' }, _('Collecting initial snapshot…'));
-  this.scheduler = new Scheduler(() => this.collect(), () => {
+  this.scheduler = Scheduler.create(() => this.collect(), () => {
    this.generation++;
    this.cpuBaseline = this.wanBaseline = null;
    this.due = {};

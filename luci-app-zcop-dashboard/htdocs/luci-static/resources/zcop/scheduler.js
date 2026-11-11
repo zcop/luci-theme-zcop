@@ -1,6 +1,7 @@
 'use strict';
+'require baseclass';
 /* SPDX-License-Identifier: Apache-2.0. One timer and one collector in flight. */
-return class Scheduler {
+class Scheduler {
  constructor(collect, reset, environment) {
   this.collect = collect;
   this.reset = reset;
@@ -46,3 +47,7 @@ return class Scheduler {
  }
  stop() { this.stopped = true; this.cancel(); this.reset(); }
 };
+
+return baseclass.extend({
+ create(collect, reset, environment) { return new Scheduler(collect, reset, environment); }
+});

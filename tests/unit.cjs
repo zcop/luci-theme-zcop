@@ -3,7 +3,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
-const load = name => new Function(fs.readFileSync(path.join(root, 'luci-app-zcop-dashboard/htdocs/luci-static/resources/zcop', name + '.js'), 'utf8'))();
+class Base {}
+Base.extend = properties => { class Module extends Base {} Object.assign(Module.prototype, properties); return Module; };
+const load = name => {
+ const Module = new Function('baseclass', fs.readFileSync(path.join(root, 'luci-app-zcop-dashboard/htdocs/luci-static/resources/zcop', name + '.js'), 'utf8'))(Base);
+ assert.ok(typeof Module === 'function' && Module.prototype instanceof Base, 'LuCI requires a baseclass subclass export: ' + name);
+ return new Module();
+};
 const metrics = load('metrics'), Scheduler = load('scheduler');
 
 (async () => {
@@ -23,7 +29,7 @@ const metrics = load('metrics'), Scheduler = load('scheduler');
  assert.equal(metrics.wan([{ interface: 'uplink', route: [{ target: '::' }] }]).interface, 'uplink');
  const timers = new Map(); let next = 0, resets = 0, calls = 0, release;
  const environment = { setTimeout(fn, delay) { const id = ++next; timers.set(id, { fn, delay }); return id; }, clearTimeout(id) { timers.delete(id); } };
- const scheduler = new Scheduler(() => { calls++; return new Promise(r => release = r); }, () => resets++, environment);
+ const scheduler = Scheduler.create(() => { calls++; return new Promise(r => release = r); }, () => resets++, environment);
  scheduler.plan(0); assert.equal(timers.size, 1);
  const first = scheduler.refresh();
  await scheduler.refresh(); assert.equal(calls, 1, 'collector overlap');

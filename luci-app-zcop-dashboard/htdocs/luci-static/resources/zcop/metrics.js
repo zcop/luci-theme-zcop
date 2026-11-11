@@ -1,6 +1,7 @@
 'use strict';
+'require baseclass';
 /* SPDX-License-Identifier: Apache-2.0. Pure calculations, no I/O. */
-return {
+return baseclass.extend({
  cpu(text) {
   const match = /^cpu\s+(.+)$/m.exec(text || '');
   if (!match) return null;
@@ -33,4 +34,4 @@ return {
   return interfaces.find(n => n.interface === 'wan') || interfaces.find(n =>
    (n.route || []).some(r => r.target === '0.0.0.0' || r.target === '::')) || null;
  }
-};
+});

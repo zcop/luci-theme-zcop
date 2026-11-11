@@ -66,7 +66,13 @@ const server = http.createServer((req, res) => {
    }) } };
    window.ui = { menu: { load: async () => tree, getChildren: node => Object.entries(node.children || {}).filter(([, n]) => n.satisfied && n.title).map(([name, n]) => ({ ...n, name })) } };
    window.L = { env: { dispatchpath: ['admin', 'status', 'zcop_dashboard'] }, url: (...args) => '/cgi-bin/luci/' + args.join('/'), resource: p => '/luci-static/resources/' + p, resolveDefault: (p, fallback) => p.catch(() => fallback) };
-   const baseclass = { extend: object => object }, view = baseclass;
+   class Base { constructor() { if (this.__init__) this.__init__(); } }
+   Base.extend = properties => { class Module extends Base {} Object.assign(Module.prototype, properties); return Module; };
+   const baseclass = Base, view = Base;
+   const instantiate = Module => {
+    if (typeof Module !== 'function' || !(Module.prototype instanceof Base)) throw Error('Invalid LuCI baseclass export');
+    return new Module();
+   };
    window.fixture = { hidden: false, calls: [], wanDevice: 'wan', down: false, fail: false, optional: false };
    Object.defineProperty(document, 'hidden', { configurable: true, get: () => fixture.hidden });
    const rpc = { declare: options => async (...args) => {
@@ -89,10 +95,10 @@ const server = http.createServer((req, res) => {
     const expected = Object.entries(options.expect || {})[0];
     return expected && expected[0] ? data[expected[0]] : data;
    } };
-   window.menu = new Function('baseclass','ui',sources.menu)(baseclass,ui); menu.__init__();
-   const metrics = new Function(sources.metrics)();
-   const Scheduler = new Function(sources.scheduler)();
-   window.dashboard = new Function('view','rpc','metrics','Scheduler',sources.dashboard)(view,rpc,metrics,Scheduler);
+   window.menu = instantiate(new Function('baseclass','ui',sources.menu)(baseclass,ui));
+   const metrics = instantiate(new Function('baseclass',sources.metrics)(baseclass));
+   const Scheduler = instantiate(new Function('baseclass',sources.scheduler)(baseclass));
+   window.dashboard = instantiate(new Function('view','rpc','metrics','Scheduler',sources.dashboard)(view,rpc,metrics,Scheduler));
    document.querySelector('#view').append(dashboard.render(await dashboard.load()));
    document.dispatchEvent(new Event('luci-loaded'));
    await dashboard.scheduler.refresh();
