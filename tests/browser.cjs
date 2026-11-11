@@ -104,6 +104,9 @@ const server = http.createServer((req, res) => {
    document.dispatchEvent(new Event('luci-loaded'));
    await dashboard.scheduler.refresh();
   }, sources);
+  assert.match(await page.locator('.zc-system').innerText(), /Waiting for the next CPU sample/);
+  assert.equal(await page.locator('.zc-traffic-empty').innerText(), 'Waiting for traffic samples');
+  assert.equal(await page.locator('.zc-traffic-values strong').allTextContents().then(v=>v.join(',')), '—,—');
   await page.clock.runFor(5000);
   await page.evaluate(() => dashboard.scheduler.refresh());
   await page.clock.runFor(5000);
@@ -112,6 +115,7 @@ const server = http.createServer((req, res) => {
   assert.equal(await page.locator('.zc-connection .zc-state').innerText(), 'Interface up');
   assert.match(await page.locator('.zc-addresses').innerText(), /192\.0\.2\.2/);
   assert.equal(await page.locator('.zc-radio-heading strong').allTextContents().then(v=>v.join(',')), '2.4 GHz,5 GHz');
+  assert.equal(await page.locator('.zc-radio .zc-state-up').count(), 2);
   assert.equal(await page.locator('.zc-datum').filter({ hasText: 'Writable storage free' }).innerText(), 'Writable storage free\n29.0 MiB');
   assert.match(await page.locator('.zc-traffic-values').innerText(), /82\.4 Mbps/);
   assert.equal(await page.getByRole('link', { name: 'Denied' }).count(), 0);
@@ -152,7 +156,9 @@ const server = http.createServer((req, res) => {
   assert.match(await page.locator('.zc-acceleration').innerText(), /Unavailable/);
   await page.evaluate(async () => { fixture.fail = true; dashboard.due = {}; await dashboard.scheduler.refresh(); });
   assert.match(await page.locator('.zc-refresh-status').innerText(), /unavailable or stale/);
-  assert.match(await page.locator('.zc-traffic-values').innerText(), /— Mbps/);
+  assert.equal(await page.locator('.zc-traffic-empty').innerText(), 'WAN status unavailable');
+  assert.equal(await page.locator('.zc-traffic-values strong').allTextContents().then(v=>v.join(',')), '—,—');
+  assert.match(await page.locator('.zc-system').innerText(), /CPU data unavailable/);
   await page.evaluate(async () => { fixture.fail = false; dashboard.due = {}; await dashboard.scheduler.refresh(); });
   // Unsupported values must stay unknown; known empty lists and zero flows
   // must remain valid zeros. Physical link and Internet reachability differ.
@@ -179,6 +185,33 @@ const server = http.createServer((req, res) => {
   });
   assert.equal(await page.locator('.zc-network-footer .zc-datum strong').allTextContents().then(v=>v.join(',')), '0,0');
   assert.equal(await page.locator('.zc-acceleration .zc-datum strong').allTextContents().then(v=>v.join(',')), '0,0');
+  await page.evaluate(async () => {
+   fixture.overrides = {
+    'network.interface.dump': {interface:[{interface:'wan',up:false,proto:'dhcp'}]},
+    'luci-rpc.getWirelessDevices': {radio0:{up:true,config:{band:'5g'},interfaces:[]}}
+   };
+   dashboard.due={}; await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('.zc-traffic-empty').innerText(), 'WAN interface is down');
+  assert.equal(await page.locator('.zc-chart').count(), 0, 'down WAN shows an active chart');
+  assert.equal(await page.locator('.zc-radio .zc-state').innerText(), 'No networks');
+  assert.equal(await page.locator('.zc-radio .zc-state-up').count(), 0, 'empty radio implies a live network');
+  await page.evaluate(async () => {
+   fixture.overrides['network.interface.dump'] = {interface:[]};
+   dashboard.due={}; await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('.zc-traffic-empty').innerText(), 'No WAN configured');
+  await page.evaluate(async () => {
+   fixture.overrides = {'network.device.status':{statistics:{rx_bytes:100,tx_bytes:100}}};
+   dashboard.due={}; await dashboard.scheduler.refresh();
+  });
+  await page.clock.runFor(5000);
+  await page.evaluate(async () => {dashboard.due={}; await dashboard.scheduler.refresh();});
+  await page.clock.runFor(5000);
+  await page.evaluate(async () => {dashboard.due={}; await dashboard.scheduler.refresh();});
+  assert.equal(await page.locator('.zc-traffic-values strong').allTextContents().then(v=>v.join(',')), '0.0 Mbps,0.0 Mbps');
+  assert.equal(await page.locator('.zc-chart').count(), 1, 'valid idle samples lost their chart');
+  assert.equal(await page.locator('.zc-traffic-empty').count(), 0, 'valid idle zero mislabeled as missing');
   await page.evaluate(async () => {fixture.overrides={}; dashboard.due={}; await dashboard.scheduler.refresh();});
   for (const [width,height] of [[1366,650],[1536,720],[1920,850],[768,1024],[390,844]]) {
    await page.setViewportSize({ width,height });

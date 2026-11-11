@@ -1,5 +1,24 @@
 # Validation
 
+## Idle and initial states, 2026-11-12
+
+Dashboard version: 0.2.1-r1. Theme remains 0.1.3-r1.
+
+- On the live CR881x, both radios reported up with empty interface lists. This
+  now shows No networks in a neutral style. Radio up remains distinct from
+  serving an AP or having associated clients.
+- A down, unconfigured or unavailable WAN replaces the empty graph with a
+  specific message. Establishing a rate baseline shows Waiting for traffic
+  samples; a valid idle connection still shows 0.0 Mbps and its chart.
+- CPU usage shows an explicit pending message until a second CPU-time sample
+  arrives. Missing data remains separate from this initial state.
+- Unit and actual-module browser checks pass, including new fixtures for the
+  first CPU/rate samples, disconnected/unconfigured WAN, failed status reads,
+  valid zero-rate traffic and radios with no interfaces.
+
+These are display changes using existing snapshots. The collector, RPC sources,
+refresh schedule, ACLs and dependencies are unchanged.
+
 ## Network overview, 2026-11-12
 
 Dashboard version: 0.2.0-r1. Theme remains 0.1.3-r1.

@@ -56,6 +56,8 @@ CPU percentage comes from deltas of /proc/stat, without invoking top or sleeping
   Unavailable; a reported false carrier shows No link.
 - A disabled radio is separate from a down radio or missing status. Band labels
   come from reported band/frequency; names such as radio0 are the fallback.
+  An up radio with an explicitly empty interface list shows No networks;
+  Radio up describes radio state, not client association or Internet access.
 - Available memory uses Linux MemAvailable, alongside Linux MemTotal. Physical
   RAM and reserved firmware memory are different quantities.
 - Missing lease lists show unavailable values; known empty lists show zero.
@@ -65,6 +67,9 @@ CPU percentage comes from deltas of /proc/stat, without invoking top or sleeping
   badge based on module presence or a nonzero flow count.
 - Traffic uses reported interface counters. Complete NSS byte-accounting
   coverage is still unverified and is labelled accordingly.
+- Disconnected, unavailable and initially unsampled WAN traffic have explicit
+  messages. Valid zero-rate samples still show 0.0 Mbps and a chart. CPU usage
+  waits for its second time sample instead of presenting a guessed value.
 - Failed data becomes unavailable/stale instead of silently keeping a healthy
   status. Reboot, device change, counter reset and long gaps reset rate baselines.
 

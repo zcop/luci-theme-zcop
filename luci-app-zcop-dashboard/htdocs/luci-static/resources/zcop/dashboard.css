@@ -31,6 +31,7 @@
 .zc-chart{width:100%;height:115px;display:block;margin-top:12px;background:repeating-linear-gradient(to top,transparent 0,transparent 27px,var(--zc-line) 28px,transparent 29px)}
 .zc-chart path{fill:none;stroke-width:2;vector-effect:non-scaling-stroke}
 .zc-chart .down{stroke:var(--zc-accent)}.zc-chart .up{stroke:var(--zc-upload);stroke-dasharray:5 4}
+.zc-traffic-empty{display:flex;align-items:center;justify-content:center;min-height:115px;padding:12px;margin-top:12px;text-align:center;font-size:12px;color:var(--zc-muted)}
 .zc-chart-caption{display:flex;justify-content:space-between;gap:12px;font-size:10px;color:var(--zc-muted);overflow-wrap:anywhere}
 .zc-gauge+.zc-gauge{margin-top:20px}.zc-gauge .zc-datum strong{font-size:18px;letter-spacing:-.02em}
 .zc-gauge-track{height:5px;margin-top:8px;border-radius:4px;background:var(--zc-inset);overflow:hidden}

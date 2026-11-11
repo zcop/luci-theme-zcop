@@ -17,6 +17,7 @@ const read = rpc.declare({ object: 'file', method: 'read', params: ['path'], exp
 
 const number = n => Number.isFinite(n) ? n.toFixed(1) : '—';
 const mib = n => Number.isFinite(n) ? number(n / 1048576) + ' MiB' : '—';
+const rate = n => Number.isFinite(n) ? number(n) + ' Mbps' : '—';
 function pair(label, value) { return E('div', { 'class': 'zc-datum' }, [E('span', {}, label), E('strong', {}, value)]); }
 function widget(title, content, kind) { return E('section', { 'class': 'zc-widget zc-' + kind }, [E('h3', {}, title), ...content]); }
 function status(text, tone) { return E('span', { 'class': 'zc-state zc-state-' + (tone || 'neutral') }, text); }
@@ -138,15 +139,25 @@ return view.extend({
    this.wanBaseline = next; this.wanTime = state.wan.time;
   } else if (!wan?.up || !wanSample || wanSample.device !== wan.l3_device) { this.traffic = null; this.wanBaseline = null; }
   const peak = Math.max(1, ...this.history.filter(Boolean).flatMap(sample => [sample.down, sample.up]));
+  const trafficMessage = this.failures.interfaces ? _('WAN status unavailable')
+   : !wan ? _('No WAN configured')
+   : wan.up === false ? _('WAN interface is down')
+   : wan.up !== true ? _('WAN status unavailable')
+   : !wan.l3_device ? _('WAN device unavailable')
+   : this.failures.wan ? _('Traffic counters unavailable')
+   : !this.traffic ? _('Waiting for traffic samples') : null;
+  const cpuPending = cpu && this.cpuBaseline && !Number.isFinite(this.cpuBusy);
   const traffic = widget(_('WAN traffic'), [
-   E('div', { 'class': 'zc-traffic-values' }, [pair(_('Download'), number(this.traffic?.down) + ' Mbps'), pair(_('Upload'), number(this.traffic?.up) + ' Mbps')]),
-   this.chart(),
-   E('div', { 'class': 'zc-chart-caption' }, [E('span', {}, _('Recent samples') + ' · ' + _('Scale') + ': ' + number(peak) + ' Mbps'),
+   E('div', { 'class': 'zc-traffic-values' }, [pair(_('Download'), rate(this.traffic?.down)), pair(_('Upload'), rate(this.traffic?.up))]),
+   trafficMessage ? E('div', { 'class': 'zc-traffic-empty' }, trafficMessage) : this.chart(),
+   E('div', { 'class': 'zc-chart-caption' }, [E('span', {}, trafficMessage ? _('No current rate')
+    : _('Recent samples') + ' · ' + _('Scale') + ': ' + number(peak) + ' Mbps'),
     E('span', {}, wan?.l3_device || _('No WAN device'))]),
    E('p', { 'class': 'zc-note' }, _('Reported interface counters; NSS coverage is unverified. History stays in this browser.'))
   ], 'traffic');
   const system = widget(_('Router health'), [
-   gauge(_('CPU busy'), number(this.cpuBusy) + '%', this.cpuBusy),
+   gauge(_('CPU busy'), Number.isFinite(this.cpuBusy) ? number(this.cpuBusy) + '%' : '—', this.cpuBusy,
+    cpuPending ? _('Waiting for the next CPU sample') : !Number.isFinite(this.cpuBusy) ? _('CPU data unavailable') : null),
    gauge(_('Available memory'), mib(memory.available), memory.total > 0 && Number.isFinite(memory.available)
     ? memory.available / memory.total * 100 : null, _('Linux memory total') + ': ' + mib(memory.total)),
    E('div', { 'class': 'zc-system-details' }, [pair(_('Uptime'), uptime(current('system')?.uptime)),
@@ -170,9 +181,11 @@ return view.extend({
    const band = { '2g': '2.4 GHz', '5g': '5 GHz', '6g': '6 GHz' }[data.config?.band]
     || (frequency >= 5925 ? '6 GHz' : frequency >= 4900 ? '5 GHz' : frequency >= 2400 ? '2.4 GHz' : name);
    const disabled = data.disabled === true || data.config?.disabled === true || data.config?.disabled === '1';
-   const text = disabled ? _('Disabled') : data.up === true ? _('Up') : data.up === false ? _('Down') : _('Unavailable');
+   const noNetworks = data.up === true && Array.isArray(data.interfaces) && data.interfaces.length === 0;
+   const text = disabled ? _('Disabled') : noNetworks ? _('No networks')
+    : data.up === true ? _('Radio up') : data.up === false ? _('Down') : _('Unavailable');
    return E('div', { 'class': 'zc-radio' }, [
-    E('div', { 'class': 'zc-radio-heading' }, [E('strong', {}, band), status(text, !disabled && data.up === true ? 'up' : 'neutral')]),
+    E('div', { 'class': 'zc-radio-heading' }, [E('strong', {}, band), status(text, !disabled && !noNetworks && data.up === true ? 'up' : 'neutral')]),
     E('p', {}, names.length ? names.join(' · ') : name),
     data.up === true && channel ? E('span', { 'class': 'zc-note' }, _('Channel') + ' ' + channel) : null]);
   }) : [E('p', { 'class': 'zc-note' }, _('No radio status available'))], 'wireless');
