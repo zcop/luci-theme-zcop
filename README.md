@@ -6,6 +6,9 @@ the main frame as one continuous surface. Fonts and icons are local; no CDN,
 wallpaper download, extra daemon or framework is required.
 
 The sidebar and section menu stay in place while the main content frame scrolls.
+The outer frame keeps the same width and height across pages at a given viewport.
+Forms use the available content space; tables wider than that space scroll
+horizontally inside the content frame, leaving both menus in place.
 Long navigation lists scroll independently only when needed to keep every page
 reachable on a short viewport. The page footer and save/apply controls stay
 inside the content frame.
@@ -104,11 +107,12 @@ in `tests/browser.cjs` exercises the actual theme menu and live view with
 synthetic RPC fixtures; it accepts `PLAYWRIGHT_MODULE` pointing to an installed
 Playwright package. Tests do not contact or modify a router.
 
-Initial scope is source, package build and synthetic browser acceptance.
-Device rendering, NSS counter coverage and CR881x CPU/RAM overhead must still be
-measured before a production default is recommended.
+The theme has also been installed and checked on a CR881x. Stable-frame checks
+cover Dashboard, Interfaces, System, Firewall and QoS at desktop and phone widths.
+This does not establish compatibility with every third-party LuCI application,
+complete NSS accounting or production resource overhead.
 
-See [initial validation evidence](docs/validation.md) for completed checks and
+See [validation evidence](docs/validation.md) for completed checks and
 the remaining device acceptance boundary.
 
 ## License

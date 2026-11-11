@@ -188,8 +188,56 @@ const server = http.createServer((req, res) => {
    assert.ok(button.y >= after.y + after.height && button.y + button.height <= height, 'final action clipped');
   }
   await page.evaluate(() => document.querySelector('#long-form-fixture').remove());
+  // Switching content and menu groups must not let intrinsic page widths
+  // resize the shell. Wide third-party tables scroll in the content frame.
+  await page.evaluate(() => {
+   window.savedView = [...document.querySelector('#view').childNodes];
+   document.querySelector('#view').replaceChildren();
+  });
+  for (const [width,height] of [[390,844],[768,1024],[1366,650],[1920,850]]) {
+   await page.setViewportSize({width,height});
+   const shell = await page.locator('.zcop-main').boundingBox();
+   for (const variant of ['narrow','form','wide']) {
+    await page.evaluate(variant => {
+     L.env.dispatchpath = variant === 'narrow' ? ['admin','status','zcop_dashboard'] : ['admin','system','system'];
+     document.querySelector('#topmenu').replaceChildren();
+     document.querySelector('#tabmenu').replaceChildren();
+     menu.render(tree);
+     const view = document.querySelector('#view');
+     if (variant === 'narrow') view.innerHTML = '<p style="max-width:180px">A short page.</p>';
+     else if (variant === 'form') view.innerHTML = '<div class="cbi-map"><div class="cbi-value"><label class="cbi-value-title" for="fixture-notes">Notes</label><div class="cbi-value-field"><textarea id="fixture-notes" style="width:100%">A form with a fluid field</textarea></div></div></div>';
+     else view.innerHTML = '<table class="table" style="min-width:2000px"><thead><tr><th>First column</th><th>Middle column</th><th>Final column</th></tr></thead><tbody><tr><td>192.0.2.1</td><td>Wide third-party table fixture</td><td><button id="fixture-table-action">Last column action</button></td></tr></tbody></table>';
+     document.querySelector('.zcop-content').scrollTo(0,0);
+    }, variant);
+    assert.deepEqual(await page.locator('.zcop-main').boundingBox(), shell, `${variant} page resized shell at ${width}`);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${variant} escaped viewport`);
+    if (variant === 'form') {
+     const field = await page.locator('#fixture-notes').boundingBox();
+     const frame = await page.locator('.zcop-content').boundingBox();
+     assert.ok(field.x >= frame.x && field.x + field.width <= frame.x + frame.width, 'form field escaped frame');
+    }
+    if (variant === 'wide') {
+     const command = await page.locator('.zcop-command').boundingBox();
+     await page.locator('#fixture-table-action').focus();
+     assert.ok(await page.locator('.zcop-content').evaluate(e => e.scrollLeft > 0), 'wide table did not scroll inside frame');
+     assert.deepEqual(await page.locator('.zcop-command').boundingBox(), command, 'horizontal scroll moved section menu');
+     assert.deepEqual(await page.locator('.zcop-main').boundingBox(), shell, 'horizontal scroll resized frame');
+     const action = await page.locator('#fixture-table-action').boundingBox();
+     const frame = await page.locator('.zcop-content').boundingBox();
+     assert.ok(action.x >= frame.x && action.x + action.width <= frame.x + frame.width, 'last table action unreachable');
+     assert.equal(await page.evaluate(() => document.scrollingElement.scrollLeft), 0, 'document scrolled horizontally');
+    }
+   }
+  }
+  await page.evaluate(() => {
+   document.querySelector('#view').replaceChildren(...savedView);
+   L.env.dispatchpath = ['admin','status','zcop_dashboard'];
+   document.querySelector('#topmenu').replaceChildren();
+   document.querySelector('#tabmenu').replaceChildren();
+   menu.render(tree);
+  });
   await page.setViewportSize({width:1440,height:940});
-  await page.locator('.zcop-content').evaluate(e => { e.scrollTop = 0; });
+  await page.locator('.zcop-content').evaluate(e => { e.scrollTo(0,0); });
   await page.screenshot({path:path.join(output,'fixed-frame-desktop.png')});
   assert.deepEqual(errors, []);
   console.log('PASS: actual modules, ACL/deep menus, metric units, hidden/paused/manual modes, unavailable data, 3 palettes and responsive layouts');

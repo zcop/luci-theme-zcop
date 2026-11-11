@@ -7,7 +7,7 @@
 :root[data-theme=luxury]{color-scheme:dark;--zc-canvas:#0d0d0c;--zc-surface:#1d1b19;--zc-inset:#151310;--zc-text:#ebdcb9;--zc-muted:#aa9c85;--zc-accent:#c8a261;--zc-soft:#3b3224;--zc-line:#40382b;--zc-good:#a8c77a;--zc-danger:#e48174;--zc-upload:#8eb8de}
 body.zcop-theme{margin:0;padding:0;background:var(--zc-canvas);color:var(--zc-text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 .zcop-theme *{box-sizing:border-box}.zcop-theme a{color:var(--zc-accent)}.zcop-theme button,.zcop-theme input,.zcop-theme select,.zcop-theme textarea{font:inherit}.zcop-theme :focus-visible{outline:2px solid var(--zc-accent);outline-offset:3px}
-.zcop-layout{display:grid;grid-template-columns:220px minmax(0,1fr);max-width:1600px;min-height:calc(100dvh - 40px);margin:20px auto;padding:0 24px}
+.zcop-layout{width:100%;display:grid;grid-template-columns:220px minmax(0,1fr);max-width:1600px;min-height:calc(100dvh - 40px);margin:20px auto;padding:0 24px}
 .zcop-sidebar{display:flex;flex-direction:column;min-width:0;padding:24px 0 16px}
 .zcop-brand{display:flex;align-items:center;gap:12px;padding:0 20px 44px 12px;color:var(--zc-text)!important;font-size:19px;line-height:1.2;font-weight:700;word-break:break-word;text-decoration:none!important}
 .zcop-brand img{flex-shrink:0}.zcop-brand small{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--zc-muted);font-weight:500;margin-top:6px}
@@ -35,7 +35,9 @@ body.zcop-theme{margin:0;padding:0;background:var(--zc-canvas);color:var(--zc-te
 @media(max-width:720px){.zcop-layout{display:block;margin:0;padding:10px;min-height:100dvh}.zcop-sidebar{display:none}.zcop-main{min-height:calc(100dvh - 20px);padding:10px 16px 18px;border-radius:16px}.zcop-menu-toggle{display:block;border:0;background:transparent;color:var(--zc-text);padding:4px;font-size:20px;cursor:pointer}.zcop-menu-open .zcop-sidebar{display:flex;padding:16px 0 20px}.zcop-brand{padding-bottom:24px}.zcop-menu-open .zcop-navitem{border-radius:10px;width:100%;border-right-color:var(--zc-line)}.zcop-menu-open .zcop-join{display:none}.zcop-sidebar-bottom{padding-top:24px}.zcop-command{margin-bottom:20px;gap:10px}.zcop-page-tabs{gap:20px}.zcop-page-tabs>li>a{font-size:13px}.zcop-footer{flex-direction:column;gap:6px}.zcop-theme .cbi-value-title{float:none;width:auto;text-align:left}.zcop-theme .cbi-value-field{margin-left:0}.zcop-content .table{max-width:100%}}
 @media(prefers-reduced-motion:reduce){.zcop-theme *{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
 
-/* The viewport owns the shell; the content frame owns page scrolling. */
+/* Explicit width above prevents Bootstrap's column-flex body and auto margins
+ * from shrinking the shell to each page's intrinsic width. The viewport owns
+ * the shell; the content frame owns vertical and wide-table scrolling. */
 body.zcop-theme:not(.zcop-login){height:100vh;height:100dvh;overflow:hidden}
 .zcop-layout{height:calc(100vh - 40px);height:calc(100dvh - 40px);min-height:0}
 .zcop-sidebar{min-height:0;max-height:100%}
