@@ -101,6 +101,9 @@ Initial scope is source, package build and synthetic browser acceptance.
 Device rendering, NSS counter coverage and CR881x CPU/RAM overhead must still be
 measured before a production default is recommended.
 
+See [initial validation evidence](docs/validation.md) for completed checks and
+the remaining device acceptance boundary.
+
 ## License
 
 Apache-2.0. Bootstrap remains a separate upstream dependency under its own
