@@ -15,12 +15,14 @@ inside the content frame.
 
 ![Dashboard design](docs/dashboard-light.png)
 
+Application rendered with synthetic test data; these are not live router values.
+
 ## Packages
 
 | Package | Purpose |
 | --- | --- |
 | `luci-theme-zcop` | Theme, connected sidebar, registered LuCI page menus, three browser-local palettes and mobile navigation. |
-| `luci-app-zcop-dashboard` | Optional read-only dashboard: interface traffic, CPU time, MemAvailable, overlay storage, ports, radio state, leases and optional NSS scalar counts. |
+| `luci-app-zcop-dashboard` | Optional read-only network overview: one traffic chart, router health, Ethernet ports and Wi-Fi radios, plus compact connection, lease and acceleration summaries. |
 
 The theme depends on `luci-theme-bootstrap` to preserve LuCI's established form,
 authentication, modal, save/apply and rollback contracts. No LuCI core patch or
@@ -78,6 +80,13 @@ The optional dashboard appears under **Overview → Dashboard**. Its navigation
 entry requires its read ACL. Other installed applications remain in their
 registered LuCI sections, with arbitrary deeper subpages retained. The theme
 does not rewrite application URLs or replace UCI configuration workflows.
+
+The dashboard uses its own presentation over existing authenticated LuCI RPC
+data. Its fixed layout adapts to the available frame width: connection state
+at the top, traffic and CPU/RAM below, then physical ports and radio state.
+Detailed configuration stays on the existing pages. Missing data is shown as
+unavailable; an interface being up does not claim Internet reachability, and
+lease counts do not claim that clients are online.
 
 ## Small-router defaults
 

@@ -18,7 +18,20 @@ const read = rpc.declare({ object: 'file', method: 'read', params: ['path'], exp
 const number = n => Number.isFinite(n) ? n.toFixed(1) : '—';
 const mib = n => Number.isFinite(n) ? number(n / 1048576) + ' MiB' : '—';
 function pair(label, value) { return E('div', { 'class': 'zc-datum' }, [E('span', {}, label), E('strong', {}, value)]); }
-function widget(title, content) { return E('section', { 'class': 'zc-widget' }, [E('h3', {}, title), ...content]); }
+function widget(title, content, kind) { return E('section', { 'class': 'zc-widget zc-' + kind }, [E('h3', {}, title), ...content]); }
+function status(text, tone) { return E('span', { 'class': 'zc-state zc-state-' + (tone || 'neutral') }, text); }
+function gauge(label, value, percent, detail) {
+ return E('div', { 'class': 'zc-gauge' }, [pair(label, value),
+  E('div', { 'class': 'zc-gauge-track', 'aria-hidden': 'true' }, Number.isFinite(percent)
+   ? [E('span', { style: 'width:' + Math.max(0, Math.min(100, percent)) + '%' })] : []),
+  detail ? E('p', { 'class': 'zc-note' }, detail) : null]);
+}
+function uptime(seconds) {
+ if (!Number.isFinite(seconds) || seconds < 0) return '—';
+ const days = Math.floor(seconds / 86400), hours = Math.floor(seconds / 3600) % 24;
+ return days ? days + ' ' + _('d') + ' ' + hours + ' ' + _('h')
+  : hours + ' ' + _('h') + ' ' + Math.floor(seconds / 60) % 60 + ' ' + _('min');
+}
 
 return view.extend({
  load() { return L.resolveDefault(board(), {}); },
@@ -51,8 +64,11 @@ return view.extend({
   } }, [E('option', { value: '5000' }, _('5 seconds')), E('option', { value: '10000' }, _('10 seconds')), E('option', { value: '0' }, _('Manual'))]);
   const root = E('div', { 'class': 'zc-dashboard' }, [
    E('h2', { 'class': 'zcop-sr-only' }, _('Dashboard')),
-   E('div', { 'class': 'zc-dashboard-meta' }, [E('span', {}, identity.model || identity.hostname || _('Router')), this.status, cadence,
-    E('button', { 'type': 'button', 'class': 'btn', 'click': () => this.scheduler.refresh() }, _('Refresh')), pause]),
+   E('div', { 'class': 'zc-dashboard-meta' }, [
+    E('div', { 'class': 'zc-dashboard-title' }, [E('h3', {}, _('Network overview')),
+     E('span', {}, identity.model || identity.hostname || _('Router'))]),
+    E('div', { 'class': 'zc-dashboard-controls' }, [this.status, cadence,
+     E('button', { 'type': 'button', 'class': 'btn', 'click': () => this.scheduler.refresh() }, _('Refresh')), pause])]),
    this.body
   ]);
   this.onVisibility = () => this.scheduler.visibility(document.hidden);
@@ -121,35 +137,62 @@ return view.extend({
    this.history = metrics.append(this.history, this.traffic);
    this.wanBaseline = next; this.wanTime = state.wan.time;
   } else if (!wan?.up || !wanSample || wanSample.device !== wan.l3_device) { this.traffic = null; this.wanBaseline = null; }
+  const peak = Math.max(1, ...this.history.filter(Boolean).flatMap(sample => [sample.down, sample.up]));
   const traffic = widget(_('WAN traffic'), [
    E('div', { 'class': 'zc-traffic-values' }, [pair(_('Download'), number(this.traffic?.down) + ' Mbps'), pair(_('Upload'), number(this.traffic?.up) + ' Mbps')]),
-   this.chart(), E('p', { 'class': 'zc-note' }, _('Reported interface counters · NSS coverage not yet validated. No persistent history.'))
-  ]);
-  traffic.classList.add('zc-traffic');
-  const system = widget(_('System headroom'), [
-   pair(_('CPU busy'), number(this.cpuBusy) + '%'),
-   pair(_('Available memory'), mib(memory.available)),
-   E('p', { 'class': 'zc-note' }, _('Linux memory total') + ': ' + mib(memory.total)),
-   pair(_('Uptime'), Number.isFinite(current('system')?.uptime) ? Math.floor(current('system').uptime / 3600) + ' h' : '—'),
-   pair(_('Writable storage free'), this.storage(current('mounts')))
-  ]);
-  const links = Object.entries(current('devices') || {}).filter(([name]) => /^(lan\d+|wan\d*)$/.test(name));
-  const ports = widget(_('Ethernet links'), links.length ? links.map(([name, data]) => pair(name.toUpperCase(),
-   data.link?.carrier ? (data.link.speed > 0 ? data.link.speed + ' Mbps' : _('Link up')) : _('No link'))) : [E('p', {}, _('No port status available'))]);
+   this.chart(),
+   E('div', { 'class': 'zc-chart-caption' }, [E('span', {}, _('Recent samples') + ' · ' + _('Scale') + ': ' + number(peak) + ' Mbps'),
+    E('span', {}, wan?.l3_device || _('No WAN device'))]),
+   E('p', { 'class': 'zc-note' }, _('Reported interface counters; NSS coverage is unverified. History stays in this browser.'))
+  ], 'traffic');
+  const system = widget(_('Router health'), [
+   gauge(_('CPU busy'), number(this.cpuBusy) + '%', this.cpuBusy),
+   gauge(_('Available memory'), mib(memory.available), memory.total > 0 && Number.isFinite(memory.available)
+    ? memory.available / memory.total * 100 : null, _('Linux memory total') + ': ' + mib(memory.total)),
+   E('div', { 'class': 'zc-system-details' }, [pair(_('Uptime'), uptime(current('system')?.uptime)),
+    pair(_('Writable storage free'), this.storage(current('mounts')))])
+  ], 'system');
+  const links = Object.entries(current('devices') || {}).filter(([name]) => /^(lan\d+|wan\d*)$/.test(name))
+   .sort(([a], [b]) => Number(b.startsWith('wan')) - Number(a.startsWith('wan')) || a.localeCompare(b, undefined, { numeric: true }));
+  const ports = widget(_('Ethernet ports'), [links.length ? E('div', { 'class': 'zc-ports' }, links.map(([name, data]) => {
+   const carrier = data.link?.carrier;
+   const up = carrier === true, down = carrier === false;
+   return E('div', { 'class': 'zc-port' + (up ? ' zc-port-up' : '') }, [
+    E('span', { 'class': 'zc-port-socket', 'aria-hidden': 'true' }, [E('i'), E('i'), E('i'), E('i')]),
+    E('strong', {}, name.toUpperCase()),
+    E('span', {}, up ? (data.link.speed > 0 ? data.link.speed + ' Mbps' : _('Link up')) : down ? _('No link') : _('Unavailable'))]);
+  })) : E('p', { 'class': 'zc-note' }, _('No port status available'))], 'ethernet');
   const radios = Object.entries(current('wireless') || {});
-  const wifi = widget(_('Wireless'), radios.length ? radios.map(([name, data]) => {
+  const wifi = widget(_('Wi-Fi radios'), radios.length ? radios.map(([name, data]) => {
    const names = (data.interfaces || []).map(iface => iface.config?.ssid).filter(Boolean);
    const channel = data.iwinfo?.channel;
-   return pair(name + (names.length ? ' · ' + names.join(', ') : ''), data.up ? _('Up') + (channel ? ' · ' + _('Channel') + ' ' + channel : '') : _('Down'));
-  }) : [E('p', {}, _('No radio status available'))]);
+   const frequency = data.iwinfo?.frequency;
+   const band = { '2g': '2.4 GHz', '5g': '5 GHz', '6g': '6 GHz' }[data.config?.band]
+    || (frequency >= 5925 ? '6 GHz' : frequency >= 4900 ? '5 GHz' : frequency >= 2400 ? '2.4 GHz' : name);
+   const disabled = data.disabled === true || data.config?.disabled === true || data.config?.disabled === '1';
+   const text = disabled ? _('Disabled') : data.up === true ? _('Up') : data.up === false ? _('Down') : _('Unavailable');
+   return E('div', { 'class': 'zc-radio' }, [
+    E('div', { 'class': 'zc-radio-heading' }, [E('strong', {}, band), status(text, !disabled && data.up === true ? 'up' : 'neutral')]),
+    E('p', {}, names.length ? names.join(' · ') : name),
+    data.up === true && channel ? E('span', { 'class': 'zc-note' }, _('Channel') + ' ' + channel) : null]);
+  }) : [E('p', { 'class': 'zc-note' }, _('No radio status available'))], 'wireless');
   const dhcp = current('leases');
-  const local = widget(_('Local network'), [pair(_('IPv4 leases'), dhcp ? String(dhcp.dhcp_leases?.length || 0) : '—'),
-   pair(_('IPv6 leases'), dhcp ? String(dhcp.dhcp6_leases?.length || 0) : '—'),
-   E('p', { 'class': 'zc-note' }, _('Leases are not a count of online clients.'))]);
+  const local = E('div', { 'class': 'zc-network-footer' }, [
+   pair(_('IPv4 leases'), Array.isArray(dhcp?.dhcp_leases) ? String(dhcp.dhcp_leases.length) : '—'),
+   pair(_('IPv6 leases'), Array.isArray(dhcp?.dhcp6_leases) ? String(dhcp.dhcp6_leases.length) : '—'),
+   E('span', { 'class': 'zc-note' }, _('Leases are not a count of online clients.'))]);
   const nss4 = metrics.count(current('nss4')), nss6 = metrics.count(current('nss6'));
-  const connection = widget(_('Connection'), [pair(_('WAN'), wan ? (wan.up ? _('Ready') : _('Down')) + ' · ' + (wan.proto || '—') : _('Unavailable')),
-   pair(_('Accelerated flows · IPv4'), nss4 === null ? _('Unavailable') : String(nss4)), pair(_('Accelerated flows · IPv6'), nss6 === null ? _('Unavailable') : String(nss6)),
-   E('p', { 'class': 'zc-note' }, _('WAN ready means interface configured; no Internet probe runs.'))]);
+  const addresses = (wan?.['ipv4-address'] || []).concat(wan?.['ipv6-address'] || []).map(a => a.address).filter(Boolean);
+  const connection = E('section', { 'class': 'zc-connection', 'aria-label': _('Connection summary') }, [
+   E('div', {}, [E('span', { 'class': 'zc-eyebrow' }, _('WAN connection')),
+    status(wan ? (wan.up === true ? _('Interface up') : wan.up === false ? _('Interface down') : _('Unavailable'))
+     : current('interfaces') ? _('Not configured') : _('Unavailable'), wan?.up === true ? 'up' : 'neutral'),
+    E('span', { 'class': 'zc-note' }, wan?.proto ? wan.proto.toUpperCase() : '—')]),
+   E('div', { 'class': 'zc-addresses' }, [E('span', { 'class': 'zc-eyebrow' }, _('Assigned addresses')),
+    E('strong', {}, addresses.length ? addresses.join(' · ') : '—')]),
+   E('div', { 'class': 'zc-acceleration', title: _('Active ECM flows; zero can be normal when idle.') }, [E('span', { 'class': 'zc-eyebrow' }, _('NSS accelerated flows')),
+    pair(_('IPv4'), nss4 === null ? _('Unavailable') : String(nss4)),
+    pair(_('IPv6'), nss6 === null ? _('Unavailable') : String(nss6))])]);
   this.body.replaceChildren(connection, traffic, system, ports, wifi, local);
  },
 
@@ -161,6 +204,7 @@ return view.extend({
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', '0 0 600 150'); svg.setAttribute('class', 'zc-chart');
+  svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', _('Recent WAN download and upload samples'));
   const samples = this.history;
   const max = Math.max(1, ...samples.filter(Boolean).flatMap(s => [s.down, s.up]));

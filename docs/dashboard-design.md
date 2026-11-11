@@ -1,86 +1,78 @@
-# Lightweight dashboard design, revision 03
+# Lightweight network overview, revision 04
 
-The approved visual prototype is in `preview/index.html`. Its data is
-illustrative and its controls never start live collection. The separate
-`luci-app-zcop-dashboard` package reads live authenticated LuCI RPC snapshots.
-This document records the design target; the README distinguishes the initial
-live widgets from the more detailed static preview.
+The dashboard is a separate read-only LuCI application with its own presentation
+and existing authenticated RPC data. The theme supplies the stable frame,
+connected sidebar and palettes. Other administration pages remain LuCI pages.
 
-## Default view
+## Information hierarchy
 
-- Connection summary: WAN link/protocol, assigned address families, optional
-  accelerated-flow count when the required counter source exists.
-- One WAN traffic plot, download and upload, with at most 60 samples at the
-  default five-second interval. History starts when the page opens.
-- CPU time usage, Linux available memory, writable overlay space and uptime.
-- Four physical Ethernet sockets, link state and negotiated speed.
-- Two radio summaries and associated station counts.
-- DHCP lease count and basic DNS/firewall service state.
+The design takes the at-a-glance overview from [OPNsense's dashboard](https://docs.opnsense.org/manual/dashboard.html)
+and the summary/detail distinction from [Fortinet's dashboard documentation](https://docs.fortinet.com/document/fortigate/latest/administration-guide/345190/dashboards-and-monitors).
+For a home router, it uses this fixed arrangement:
 
-The selected sidebar area owns the main frame. The command row names the page
-once. Configuration and detailed evidence are reached through existing pages,
-not duplicated inside every dashboard card. Other LuCI pages remain available.
+1. A compact connection strip: WAN interface state, protocol, assigned addresses
+   and optional active ECM accelerated-flow counts.
+2. WAN traffic: one download/upload plot with visible values and an automatic
+   scale. Recent numeric samples stay in the browser.
+3. Router health: CPU busy and Linux MemAvailable, with uptime and writable
+   storage as secondary rows. No separate disk, memory or CPU charts.
+4. Ethernet ports and Wi-Fi radios: link/speed per socket; radio state, SSID and
+   current channel when reported. Lease counts sit in a small footer.
 
-## Live integration budget
+Traffic and health share the first row, and ports and radios share the second.
+CSS container queries stack panels when the available content frame is narrow.
+The existing sidebar and top menu remain fixed. There is no widget editor,
+drag/resize library, live event feed, traffic classification or client inventory.
 
-This is an implementation target, not a measured guarantee of router cost.
+The screenshots in this directory exercise the actual application against
+clearly marked synthetic RPC fixtures. `preview/index.html` remains the original,
+more detailed static concept; its illustrative features are not a live feature
+list and it never connects to a router.
 
-| Data | Target refresh while visible | Source and limits |
+## Data and router budget
+
+The redesign reuses the existing collector, scheduler, RPC methods and ACLs.
+It adds no router daemon, polling source, scan, probe, shell command, flow dump,
+history database or runtime dependency. There is one collector in flight.
+
+| Snapshot | Refresh while visible | Source |
 | --- | --- | --- |
-| WAN byte counters | 5 seconds, selectable 10 seconds or manual | Read only the selected WAN accounting layer; derive deltas in the browser. |
-| System headroom | 15 seconds | Existing system info for memory/uptime; CPU percentage requires CPU-time deltas, not load average. Cache board/version information after initial load. |
-| Link/protocol state | 15 seconds | Netifd/device status; reuse existing LuCI RPC sources. |
-| NSS summary | 15 seconds, only when supported | Compact accelerated-count/counter read; no ECM connection dump. |
-| Radio association and leases | 30 seconds | Existing iwinfo/netifd and lease summaries, bounded responses; no scans or reachability probes. |
-| Overlay and service state | 60 seconds | Small status read; no package enumeration or log dump. |
+| WAN byte counters | 5 seconds, selectable 10 seconds or manual | Selected WAN L3 device status |
+| Memory, uptime, CPU time and link state | 15 seconds | system.info, /proc/stat, interface/device summaries |
+| Radio state and DHCP leases | 30 seconds | Existing luci-rpc summaries; no station dump or scan |
+| Optional accelerated-flow counts | 30 seconds | Two bounded debugfs scalar reads |
+| Writable storage | 60 seconds | Existing mount summary |
 
-The current feed's `getCPUUsage` implementation launches `top` piped into
-`awk` (`feeds/luci/modules/luci-base/root/usr/share/rpcd/ucode/luci`). Do not
-reuse that command every refresh. Read a compact `/proc/stat` snapshot via a
-bounded authenticated RPC and calculate CPU-time deltas in the browser.
-There must be no sampling sleep or long-running process in the RPC handler.
+Pause collection when hidden, leaving the page or explicitly paused. A request
+already in flight can finish. Failed collection backs off. Numeric traffic
+history is limited to 60 samples in the browser; no persistent history is kept.
+CPU percentage comes from deltas of /proc/stat, without invoking top or sleeping.
 
-Use a single browser scheduler to batch due calls, one request batch in flight
-at a time, with timeout and failure backoff. Pause scheduled reads when hidden,
-when leaving the dashboard and when explicitly paused. On return, refresh a
-snapshot before calculating rates. Requests already in flight may complete.
-Do not fill a long hidden interval with invented samples. Clear the rate
-baseline on reboot, interface replacement, counter reset or changed WAN.
+## Status semantics
 
-Reuse rpcd/uhttpd. No additional daemon, shell polling loop, chart library,
-SQLite, RRD, collectd or persistent traffic history. The bounded numeric sample
-buffer resides in the viewing browser, not in the router's RAM or flash.
+- **Interface up** means the logical WAN interface reports up. It does not
+  establish gateway, DNS or Internet reachability. No probe runs automatically.
+- Physical Ethernet carrier is separate: absent carrier information shows
+  Unavailable; a reported false carrier shows No link.
+- A disabled radio is separate from a down radio or missing status. Band labels
+  come from reported band/frequency; names such as radio0 are the fallback.
+- Available memory uses Linux MemAvailable, alongside Linux MemTotal. Physical
+  RAM and reserved firmware memory are different quantities.
+- Missing lease lists show unavailable values; known empty lists show zero.
+  Leases are not a count of online clients.
+- NSS values are active ECM accelerated-flow counts. Zero is valid at idle;
+  missing/unsupported counters show Unavailable. There is no guessed enabled
+  badge based on module presence or a nonzero flow count.
+- Traffic uses reported interface counters. Complete NSS byte-accounting
+  coverage is still unverified and is labelled accordingly.
+- Failed data becomes unavailable/stale instead of silently keeping a healthy
+  status. Reboot, device change, counter reset and long gaps reset rate baselines.
 
-Slow/disabled widgets do not keep polling. Do not run speed tests, pings,
-Wi-Fi scans, per-flow conntrack/ECM dumps, packet capture, DPI or top-talker
-accounting as a dashboard side effect. Detailed diagnostics remain on demand.
+## Validation boundary
 
-## Accuracy requirements
-
-- WAN ready means link and address configuration; it does not assert that an
-  Internet probe passed. No automatic external probe is planned.
-- Verify byte counter coverage under NSS acceleration before showing rates as
-  total WAN traffic. Do not sum physical/conduit/VLAN/PPP counts for the same
-  packets. If coverage is uncertain, show that limitation or no total.
-- A loaded NSS module does not establish active acceleration. Show unsupported,
-  unknown or stale data honestly; do not replace unavailable values with zero.
-- Memory uses MemAvailable against Linux MemTotal, not raw MemFree or physical
-  RAM. Physical RAM and firmware reservations are distinct quantities.
-- DHCP leases are unexpired leases, not a count of online clients. Wi-Fi
-  associations are counted separately. Do not ARP-scan clients to make a badge.
-- DNS process state does not prove DNS replies; firewall service state does not
-  prove correctness of every rule. Labels must reflect the actual evidence.
-- Temperature is omitted where there is no validated sensor. CPU frequency and
-  firmware details belong in system details, not frequent dashboard polling.
-
-## Acceptance before live defaults
-
-Measure the built package size and browser assets. On the CR881x, compare idle
-without dashboard, one dashboard open, and a dashboard open during routed NSS
-traffic. Record CPU, MemAvailable, rpcd/uhttpd memory, refresh latency, error
-rate, and traffic counter accuracy. Confirm requests stop when hidden/paused,
-resume without spikes, and remain bounded with two viewing browsers. Reduce
-refresh cadence or remove a widget if there is a material regression.
-
-Current evidence is browser layout/interaction acceptance only. No router
-resource measurements or live dashboard data validation have been performed.
+Unit checks cover calculation and scheduling. Browser fixtures cover actual
+LuCI module exports, labels, unknown-versus-zero states, ACL-filtered navigation,
+three palettes, long forms and wide tables, and responsive frame behavior.
+Live rendering is checked separately on CR881x. Package/browser validation
+is not a completed production load comparison or complete accelerated-traffic
+accounting acceptance. See [validation.md](validation.md).

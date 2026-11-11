@@ -1,5 +1,32 @@
 # Validation
 
+## Network overview, 2026-11-12
+
+Dashboard version: 0.2.0-r1. Theme remains 0.1.3-r1.
+
+The dashboard now has a compact connection strip and four panels: WAN traffic,
+router health, Ethernet ports and Wi-Fi radios. DHCP lease counts are a footer.
+The presentation uses the existing RPC calls, ACLs, collector and scheduler;
+there are no added polling sources or router services.
+
+- Unit and actual-module browser checks pass. Existing serialized, hidden,
+  paused/manual and failure behavior remains covered. Container-based layouts
+  are exercised across the existing desktop/tablet/phone viewport checks.
+- Added fixture checks distinguish unknown links/radios and omitted lease
+  lists from disconnected/disabled states and known empty lists. Valid zero
+  accelerated-flow counts remain zero; unsupported counters remain unavailable.
+- The simplified preview screenshots render the actual dashboard module with
+  explicitly marked synthetic RPC data.
+- The build's CSSTidy 1.3 removes CSS container conditions and applies their
+  rules globally. CSS minification is disabled for this application to retain
+  its responsive rules; package compression still applies. Theme CSS and
+  JavaScript keep their existing build settings.
+
+A bounded third-party source review identified status-label pitfalls. Primary
+review implemented and checked the unknown-state changes; a returned review
+is not device acceptance. The existing production/accounting limits below
+continue to apply.
+
 ## Stable frame, 2026-11-12
 
 Theme version: 0.1.3-r1. Optional dashboard remains 0.1.1-r1.

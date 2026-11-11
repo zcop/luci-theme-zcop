@@ -73,7 +73,7 @@ const server = http.createServer((req, res) => {
     if (typeof Module !== 'function' || !(Module.prototype instanceof Base)) throw Error('Invalid LuCI baseclass export');
     return new Module();
    };
-   window.fixture = { hidden: false, calls: [], wanDevice: 'wan', down: false, fail: false, optional: false };
+   window.fixture = { hidden: false, calls: [], wanDevice: 'wan', down: false, fail: false, optional: false, overrides: {} };
    Object.defineProperty(document, 'hidden', { configurable: true, get: () => fixture.hidden });
    const rpc = { declare: options => async (...args) => {
     const key = options.object + '.' + options.method; fixture.calls.push({ key, args, time: Date.now() });
@@ -81,16 +81,17 @@ const server = http.createServer((req, res) => {
     let data;
     if (key === 'system.info') data = { uptime: 187200, memory: { total: 170917888, available: 36280729 } };
     else if (key === 'system.board') data = { model: 'CR881x · synthetic fixture' };
-    else if (key === 'network.interface.dump') data = { interface: [{ interface: 'wan', up: !fixture.down, l3_device: fixture.wanDevice, proto: 'dhcp' }] };
+    else if (key === 'network.interface.dump') data = { interface: [{ interface: 'wan', up: !fixture.down, l3_device: fixture.wanDevice, proto: 'dhcp', 'ipv4-address': [{address:'192.0.2.2'}] }] };
     else if (key === 'network.device.status') data = { statistics: { rx_bytes: Math.floor(Date.now() / 1000 * 10300000), tx_bytes: Math.floor(Date.now() / 1000 * 1600000) } };
     else if (key === 'luci-rpc.getNetworkDevices') data = Object.fromEntries(['wan','lan1','lan2','lan3'].map(n => [n, { link: { carrier: n === 'wan' || n === 'lan3', speed: 1000 } }]));
-    else if (key === 'luci-rpc.getWirelessDevices') data = { radio0: { up: true, iwinfo: { channel: 1 }, interfaces: [{ config: { ssid: 'Fixture 2.4 GHz' } }] }, radio1: { up: true, iwinfo: { channel: 36 }, interfaces: [{ config: { ssid: 'Fixture 5 GHz' } }] } };
+    else if (key === 'luci-rpc.getWirelessDevices') data = { radio0: { up: true, iwinfo: { channel: 1, frequency:2412 }, interfaces: [{ config: { ssid: 'Fixture 2.4 GHz' } }] }, radio1: { up: true, iwinfo: { channel: 36, frequency:5180 }, interfaces: [{ config: { ssid: 'Fixture 5 GHz' } }] } };
     else if (key === 'luci-rpc.getDHCPLeases') data = { dhcp_leases: Array(8).fill({}), dhcp6_leases: Array(3).fill({}) };
     else if (key === 'luci.getMountPoints') data = { result: [{ mount: '/overlay', free: 30 * 1048576, avail: 29 * 1048576 }] };
     else if (key === 'file.read') {
      if (args[0] === '/proc/stat') data = { data: 'cpu  ' + Math.floor(Date.now() / 100) + ' 0 0 ' + Math.floor(Date.now() / 10) + ' 0 0 0 0 0 0\n' };
      else { if (fixture.optional) throw Error('optional counter unavailable'); data = { data: '48\n' }; }
     }
+    if (Object.hasOwn(fixture.overrides, key)) data = fixture.overrides[key];
     if (data === undefined) throw Error('Unexpected RPC ' + key);
     const expected = Object.entries(options.expect || {})[0];
     return expected && expected[0] ? data[expected[0]] : data;
@@ -107,7 +108,10 @@ const server = http.createServer((req, res) => {
   await page.evaluate(() => dashboard.scheduler.refresh());
   await page.clock.runFor(5000);
   await page.evaluate(() => dashboard.scheduler.refresh());
-  assert.equal(await page.locator('.zc-widget').count(), 6);
+  assert.equal(await page.locator('.zc-widget').count(), 4);
+  assert.equal(await page.locator('.zc-connection .zc-state').innerText(), 'Interface up');
+  assert.match(await page.locator('.zc-addresses').innerText(), /192\.0\.2\.2/);
+  assert.equal(await page.locator('.zc-radio-heading strong').allTextContents().then(v=>v.join(',')), '2.4 GHz,5 GHz');
   assert.equal(await page.locator('.zc-datum').filter({ hasText: 'Writable storage free' }).innerText(), 'Writable storage free\n29.0 MiB');
   assert.match(await page.locator('.zc-traffic-values').innerText(), /82\.4 Mbps/);
   assert.equal(await page.getByRole('link', { name: 'Denied' }).count(), 0);
@@ -145,11 +149,37 @@ const server = http.createServer((req, res) => {
   await page.evaluate(() => dashboard.scheduler.refresh());
   await page.getByRole('combobox', { name: 'Refresh interval' }).selectOption('0');
   await page.evaluate(async () => { fixture.optional = true; dashboard.due = {}; await dashboard.scheduler.refresh(); });
-  assert.match(await page.locator('.zc-widget').first().innerText(), /Unavailable/);
+  assert.match(await page.locator('.zc-acceleration').innerText(), /Unavailable/);
   await page.evaluate(async () => { fixture.fail = true; dashboard.due = {}; await dashboard.scheduler.refresh(); });
   assert.match(await page.locator('.zc-refresh-status').innerText(), /unavailable or stale/);
   assert.match(await page.locator('.zc-traffic-values').innerText(), /— Mbps/);
   await page.evaluate(async () => { fixture.fail = false; dashboard.due = {}; await dashboard.scheduler.refresh(); });
+  // Unsupported values must stay unknown; known empty lists and zero flows
+  // must remain valid zeros. Physical link and Internet reachability differ.
+  await page.evaluate(async () => {
+   fixture.optional = false;
+   fixture.overrides = {
+    'network.interface.dump': {interface:[{interface:'wan',proto:'dhcp'}]},
+    'luci-rpc.getNetworkDevices': {wan:{},lan1:{link:{carrier:false}}},
+    'luci-rpc.getWirelessDevices': {radio0:{interfaces:[]},radio1:{up:false,disabled:true,config:{band:'5g'}}},
+    'luci-rpc.getDHCPLeases': {}
+   };
+   dashboard.due = {}; await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('.zc-connection .zc-state').innerText(), 'Unavailable');
+  assert.match(await page.locator('.zc-port').filter({hasText:'WAN'}).innerText(), /Unavailable/);
+  assert.match(await page.locator('.zc-port').filter({hasText:'LAN1'}).innerText(), /No link/);
+  assert.match(await page.locator('.zc-radio').first().innerText(), /Unavailable/);
+  assert.match(await page.locator('.zc-radio').last().innerText(), /Disabled/);
+  assert.equal(await page.locator('.zc-network-footer .zc-datum strong').allTextContents().then(v=>v.join(',')), '—,—');
+  await page.evaluate(async () => {
+   fixture.overrides['luci-rpc.getDHCPLeases'] = {dhcp_leases:[],dhcp6_leases:[]};
+   fixture.overrides['file.read'] = {data:'0\n'};
+   dashboard.due = {}; await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('.zc-network-footer .zc-datum strong').allTextContents().then(v=>v.join(',')), '0,0');
+  assert.equal(await page.locator('.zc-acceleration .zc-datum strong').allTextContents().then(v=>v.join(',')), '0,0');
+  await page.evaluate(async () => {fixture.overrides={}; dashboard.due={}; await dashboard.scheduler.refresh();});
   for (const [width,height] of [[1366,650],[1536,720],[1920,850],[768,1024],[390,844]]) {
    await page.setViewportSize({ width,height });
    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'page overflow at ' + width);
