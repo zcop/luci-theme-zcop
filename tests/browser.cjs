@@ -13,7 +13,7 @@ fs.mkdirSync(output, { recursive: true });
 const bootstrap = process.env.LUCI_BOOTSTRAP_CSS;
 if (!bootstrap) throw Error('Set LUCI_BOOTSTRAP_CSS to an installed/bootstrap source cascade.css');
 
-const fixture = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/luci-static/zcop/cascade.css"><script src="/luci-static/zcop/palette.js"></script></head><body class="zcop-theme"><div class="zcop-layout"><aside id="mainmenu" class="zcop-sidebar"><a class="zcop-brand" href="/"><img src="/luci-static/zcop/logo.svg" width="30" height="30" alt=""><span>CR881x<small>Router control</small></span></a><nav id="topmenu"></nav><div class="zcop-sidebar-bottom"><div class="zcop-palettes"><button data-zcop-palette="light">Light</button><button data-zcop-palette="dark">Dark</button><button data-zcop-palette="luxury">Luxury</button></div></div></aside><main id="maincontent" class="zcop-main"><div class="zcop-command"><button class="zcop-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button><nav id="tabmenu"></nav><div id="indicators"></div></div><div class="zcop-content"><div id="view"></div></div><footer class="zcop-footer"><span>Synthetic RPC fixture · no router connection</span><span>Zcop theme</span></footer></main></div></body></html>`;
+const fixture = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/luci-static/zcop/cascade.css"><script src="/luci-static/zcop/palette.js"></script></head><body class="zcop-theme"><div class="zcop-layout"><aside id="mainmenu" class="zcop-sidebar"><a class="zcop-brand" href="/"><img src="/luci-static/zcop/logo.svg" width="30" height="30" alt=""><span>CR881x<small>Router control</small></span></a><nav id="topmenu"></nav><div class="zcop-sidebar-bottom"><div class="zcop-palettes"><button data-zcop-palette="light">Light</button><button data-zcop-palette="dark">Dark</button><button data-zcop-palette="luxury">Luxury</button></div></div></aside><main id="maincontent" class="zcop-main"><div class="zcop-command"><button class="zcop-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button><nav id="tabmenu"></nav><div id="indicators"></div></div><div class="zcop-content"><div id="view"></div><footer class="zcop-footer"><span>Synthetic RPC fixture · no router connection</span><span>Zcop theme</span></footer></div></main></div></body></html>`;
 
 const server = http.createServer((req, res) => {
  const pathname = new URL(req.url, 'http://localhost').pathname;
@@ -153,12 +153,44 @@ const server = http.createServer((req, res) => {
   for (const [width,height] of [[1366,650],[1536,720],[1920,850],[768,1024],[390,844]]) {
    await page.setViewportSize({ width,height });
    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'page overflow at ' + width);
+   assert.equal(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight), false, 'document scrolls at ' + width);
   }
   await page.getByRole('button', { name: 'Toggle navigation' }).click();
   assert.equal(await page.getByRole('button', { name: 'Toggle navigation' }).getAttribute('aria-expanded'), 'true');
+  await page.getByRole('link', {name:'Services',exact:true}).focus();
+  assert.equal(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight), false, 'open mobile menu scrolls document');
+  const mobileCommand = await page.locator('.zcop-command').boundingBox();
+  assert.ok(mobileCommand.y >= 0 && mobileCommand.y + mobileCommand.height < 844, 'mobile section menu clipped');
   await page.keyboard.press('Escape');
   assert.equal(await page.getByRole('button', { name: 'Toggle navigation' }).getAttribute('aria-expanded'), 'false');
   await page.screenshot({ path: path.join(output, 'live-fixture-mobile.png'), fullPage: true });
+  // A long configuration form must scroll inside the frame while its menus
+  // remain stationary, and keyboard focus must reach its last control.
+  await page.evaluate(() => {
+   const section = document.createElement('section'); section.id = 'long-form-fixture';
+   section.innerHTML = '<div style="height:1600px">Long configuration form fixture</div><div class="cbi-page-actions"><button id="fixture-save">Save fixture</button></div>';
+   document.querySelector('#view').append(section);
+  });
+  for (const [width,height] of [[1366,650],[1920,850],[390,844]]) {
+   await page.setViewportSize({ width,height });
+   await page.locator('.zcop-content').evaluate(e => { e.scrollTop = 0; });
+   const before = await page.locator('.zcop-command').boundingBox();
+   const sidebarBefore = width > 720 ? await page.locator('.zcop-sidebar').boundingBox() : null;
+   await page.locator('#fixture-save').evaluate(e => e.blur());
+   await page.locator('#fixture-save').focus();
+   const after = await page.locator('.zcop-command').boundingBox();
+   assert.equal(after.y, before.y, 'section menu moved at ' + width);
+   if (sidebarBefore) assert.equal((await page.locator('.zcop-sidebar').boundingBox()).y, sidebarBefore.y, 'sidebar moved');
+   assert.ok(await page.locator('.zcop-content').evaluate(e => e.scrollTop > 0), 'frame did not scroll at ' + width);
+   assert.equal(await page.evaluate(() => document.scrollingElement.scrollTop), 0, 'window scrolled');
+   assert.equal(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight), false, 'long form escaped viewport');
+   const button = await page.locator('#fixture-save').boundingBox();
+   assert.ok(button.y >= after.y + after.height && button.y + button.height <= height, 'final action clipped');
+  }
+  await page.evaluate(() => document.querySelector('#long-form-fixture').remove());
+  await page.setViewportSize({width:1440,height:940});
+  await page.locator('.zcop-content').evaluate(e => { e.scrollTop = 0; });
+  await page.screenshot({path:path.join(output,'fixed-frame-desktop.png')});
   assert.deepEqual(errors, []);
   console.log('PASS: actual modules, ACL/deep menus, metric units, hidden/paused/manual modes, unavailable data, 3 palettes and responsive layouts');
  } finally { await browser.close(); server.close(); }

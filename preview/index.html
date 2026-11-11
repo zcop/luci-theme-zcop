@@ -53,6 +53,9 @@
 @media(max-width:850px){.traffic-widget,.resources-widget{grid-column:span 12}.health-strip{gap:12px}.health-strip strong,.health-strip .badge{font-size:12px}.health-strip small{font-size:11px}.ports-widget,.wifi-widget{grid-column:span 12}}
 @media(max-width:720px){.dashboard-meta{gap:8px;margin-bottom:14px}.dashboard-meta>span:nth-child(2){width:calc(100% - 100px);font-size:11px}.refresh-control{margin-left:0;font-size:11px}.health-strip{grid-template-columns:1fr;gap:12px;padding:14px}.health-strip>div{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.health-strip>div+div{border-top:1px solid var(--line);padding-top:12px}.dashboard-grid{gap:12px}.widget{padding:14px}.traffic-chart{height:130px}.traffic-totals strong{font-size:24px}.chart-axis span:nth-child(2){display:none}.widget-heading{margin-bottom:16px}.physical-port strong{font-size:12px}.physical-port small{font-size:11px}.widget-footnote{font-size:11px}.services-widget .service-row{display:flex;margin:0}.services-widget .service-row+.service-row{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}}
 
+
+/* Fixed navigation and one content scroller. */
+body{height:100dvh;overflow:hidden}.layout{height:calc(100dvh - 40px);min-height:0}.sidebar{min-height:0}.brand,.side-bottom{flex-shrink:0}.menu{min-height:0;align-content:start;overflow-y:auto;scrollbar-width:thin;padding:20px 1px 20px 0;margin:-20px -1px -20px 0}.side-bottom{padding-top:24px}.main{height:100%;min-height:0;overflow:hidden}.pagebar{flex-shrink:0}.content-frame{min-height:0;overflow:auto;flex:1;overscroll-behavior:contain;scrollbar-gutter:stable;padding:4px;margin:-4px}@media(min-width:1600px){.layout{height:calc(100dvh - 64px);min-height:0}}@media(max-width:1050px){.layout{height:calc(100dvh - 24px)}}@media(max-width:720px){.layout{display:flex;flex-direction:column;height:100dvh;min-height:0}.main{height:auto;flex:1;min-height:0}.sidebar{max-height:45dvh;flex:0 1 auto}.layout.menu-open .sidebar{padding:8px 0 16px}.side-bottom{padding-top:12px}.content-frame{scrollbar-gutter:auto}}
 </style>
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>
 <symbol id="grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
@@ -81,8 +84,10 @@
  <main class="main">
   <h1 class="sr-only" id="title">Interfaces</h1>
   <header class="pagebar"><button class="mobile-toggle" aria-label="Toggle navigation" aria-expanded="false"><svg><path d="M3 6h18M3 12h18M3 18h18"/></svg></button><div class="tabs" role="tablist" aria-label="Network pages"></div><button class="primary page-action demo-action" aria-label="Add interface"><svg><use href="#plus"/></svg><span>Add interface</span></button></header>
+  <div class="content-frame">
   <section id="page-content" role="tabpanel" tabindex="0"></section>
   <footer><span>Visual prototype · Sample values · No connection to your router</span><span>Theme concept / 03</span></footer>
+  </div>
  </main>
 </div><div class="notice" role="status"></div>
 <template id="interfaces-view">

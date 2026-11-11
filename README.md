@@ -5,6 +5,11 @@ dark palette and a black/gold luxury palette. The selected sidebar item joins
 the main frame as one continuous surface. Fonts and icons are local; no CDN,
 wallpaper download, extra daemon or framework is required.
 
+The sidebar and section menu stay in place while the main content frame scrolls.
+Long navigation lists scroll independently only when needed to keep every page
+reachable on a short viewport. The page footer and save/apply controls stay
+inside the content frame.
+
 ![Dashboard design](docs/dashboard-light.png)
 
 ## Packages

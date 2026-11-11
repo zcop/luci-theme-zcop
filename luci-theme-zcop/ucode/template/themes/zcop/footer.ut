@@ -1,7 +1,7 @@
 {# SPDX-License-Identifier: Apache-2.0 #}
 {% if (!blank_page): %}
-   </div>
    <footer class="zcop-footer"><span>{{ version.distname }} {{ version.distversion }} · {{ version.luciname }}</span><a href="https://github.com/zcop/luci-theme-zcop" target="_blank" rel="noreferrer">Zcop theme</a></footer>
+   </div>
   </main>
  </div>
  <script>L.require('menu-zcop');</script>
