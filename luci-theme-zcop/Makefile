@@ -1,0 +1,25 @@
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=luci-theme-zcop
+PKG_VERSION:=0.1.0
+PKG_RELEASE:=1
+PKG_LICENSE:=Apache-2.0
+
+LUCI_TITLE:=Zcop LuCI theme with connected navigation
+LUCI_DEPENDS:=+luci-theme-bootstrap
+LUCI_MINIFY_UT:=0
+
+define Package/luci-theme-zcop/postrm
+#!/bin/sh
+[ -n "$${IPKG_INSTROOT}" ] || {
+	uci -q delete luci.themes.Zcop
+	if [ "$$(uci -q get luci.main.mediaurlbase)" = /luci-static/zcop ]; then
+		uci set luci.main.mediaurlbase=/luci-static/bootstrap
+	fi
+	uci commit luci
+}
+endef
+
+include $(TOPDIR)/feeds/luci/luci.mk
+
+# call BuildPackage - OpenWrt buildroot signature

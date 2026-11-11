@@ -1,0 +1,40 @@
+{# SPDX-License-Identifier: Apache-2.0 #}
+{%
+ import { getuid, getspnam } from 'luci.core';
+ const board = ubus.call('system', 'board') ?? {};
+ const page_path = length(ctx.path) > length(ctx.request_path) ? ctx.path : ctx.request_path;
+ http.prepare_content('text/html; charset=UTF-8');
+%}
+<!doctype html>
+<html lang="{{ dispatcher.lang }}">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <meta name="darkreader-lock">
+ <title>{{ striptags(`${board.hostname ?? 'LuCI'}${dispatched?.title ? ` | ${_(dispatched.title)}` : ''}`) }}</title>
+ <script src="{{ media }}/palette.js"></script>
+ <link rel="stylesheet" href="{{ media }}/cascade.css">
+ <link rel="icon" href="{{ media }}/logo.svg" type="image/svg+xml">
+ {% if (dispatched?.css): %}<link rel="stylesheet" href="{{ resource }}/{{ dispatched.css }}">{% endif %}
+ {% if (css): %}<style>{{ css }}</style>{% endif %}
+ <script src="{{ dispatcher.build_url('admin/translations', dispatcher.lang) }}"></script>
+ <script src="{{ resource }}/cbi.js"></script>
+</head>
+<body class="zcop-theme {{ blank_page ? 'zcop-login' : '' }} lang_{{ dispatcher.lang }}" data-page="{{ entityencode(join('-', page_path), true) }}">
+{% if (!blank_page): %}
+ <a class="zcop-skip" href="#maincontent">{{ _('Skip to content') }}</a>
+ <div class="zcop-layout">
+  <aside id="mainmenu" class="zcop-sidebar" aria-label="{{ _('Main navigation') }}">
+   <a class="zcop-brand" href="{{ dispatcher.build_url('admin') }}"><img src="{{ media }}/logo.svg" alt="" width="30" height="30"><span>{{ striptags(board.hostname ?? 'LuCI') }}<small>{{ _('Router control') }}</small></span></a>
+   <nav id="topmenu"></nav>
+   <div class="zcop-sidebar-bottom"><div class="zcop-palettes" role="group" aria-label="{{ _('Color theme') }}"><button type="button" data-zcop-palette="light">{{ _('Light') }}</button><button type="button" data-zcop-palette="dark">{{ _('Dark') }}</button><button type="button" data-zcop-palette="luxury">{{ _('Luxury') }}</button></div><a class="zcop-logout" href="{{ dispatcher.build_url('admin/logout') }}">{{ _('Log out') }}</a></div>
+  </aside>
+  <main id="maincontent" class="zcop-main">
+   <div class="zcop-command"><button class="zcop-menu-toggle" type="button" aria-controls="mainmenu" aria-expanded="false" aria-label="{{ _('Toggle navigation') }}">☰</button><nav id="tabmenu" aria-label="{{ _('Section pages') }}"></nav><div id="indicators"></div></div>
+   <div class="zcop-content">
+    {% if (getuid() == 0 && getspnam('root')?.pwdp === ''): %}
+     <div class="alert-message warning"><h4>{{ _('No password set!') }}</h4><p>{{ _('There is no password set on this router. Please configure a root password to protect the web interface.') }}</p>{% if (dispatcher.lookup('admin/system/admin')): %}<a class="btn" href="{{ dispatcher.build_url('admin/system/admin') }}">{{ _('Go to password configuration...') }}</a>{% endif %}</div>
+    {% endif %}
+    {% if (board.rootfs_type == 'initramfs'): %}<div class="alert-message warning"><h4>{{ _('System running in recovery (initramfs) mode.') }}</h4><p>{{ _('No changes to settings will be stored and are lost after rebooting.') }}</p></div>{% endif %}
+    <noscript><div class="alert-message warning">{{ _('You must enable JavaScript in your browser or LuCI will not work properly.') }}</div></noscript>
+{% endif %}

@@ -1,0 +1,8 @@
+{
+ "admin/status/zcop_dashboard": {
+  "title": "Dashboard",
+  "order": 0,
+  "action": { "type": "view", "path": "zcop/dashboard" },
+  "depends": { "acl": [ "luci-app-zcop-dashboard" ] }
+ }
+}

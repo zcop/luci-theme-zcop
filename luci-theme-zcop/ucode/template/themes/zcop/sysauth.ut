@@ -1,0 +1,3 @@
+{# Reuse LuCI's authentication form and its optional authentication providers.
+   SPDX-License-Identifier: Apache-2.0 #}
+{% include('themes/bootstrap/sysauth') %}

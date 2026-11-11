@@ -1,0 +1,20 @@
+{
+ "luci-app-zcop-dashboard": {
+  "description": "Read lightweight router dashboard snapshots",
+  "read": {
+   "ubus": {
+    "system": [ "info", "board" ],
+    "network.interface": [ "dump" ],
+    "network.device": [ "status" ],
+    "luci-rpc": [ "getNetworkDevices", "getWirelessDevices", "getDHCPLeases" ],
+    "luci": [ "getMountPoints" ],
+    "file": [ "read" ]
+   },
+   "file": {
+    "/proc/stat": [ "read" ],
+    "/sys/kernel/debug/ecm/ecm_nss_ipv4/accelerated_count": [ "read" ],
+    "/sys/kernel/debug/ecm/ecm_nss_ipv6/accelerated_count": [ "read" ]
+   }
+  }
+ }
+}

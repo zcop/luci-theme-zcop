@@ -1,0 +1,5 @@
+*.apk
+*.ipk
+uc.out
+test-results/
+node_modules/

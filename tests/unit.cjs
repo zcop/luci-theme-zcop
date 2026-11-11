@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const load = name => new Function(fs.readFileSync(path.join(root, 'luci-app-zcop-dashboard/htdocs/luci-static/resources/zcop', name + '.js'), 'utf8'))();
+const metrics = load('metrics'), Scheduler = load('scheduler');
+
+(async () => {
+ assert.deepEqual(metrics.cpu('cpu  100 2 30 400 5 6 7 0 99 10\ncpu0 1'), { total: 550, idle: 405 });
+ assert.equal(metrics.cpu('missing'), null);
+ assert.equal(metrics.cpuPercent({ total: 100, idle: 50 }, { total: 200, idle: 140 }), 10);
+ assert.equal(metrics.cpuPercent({ total: 200, idle: 50 }, { total: 100, idle: 10 }), null);
+ const before = { device: 'wan', time: 1000, rx: 0, tx: 0 };
+ assert.deepEqual(metrics.rate(before, { device: 'wan', time: 6000, rx: 62500000, tx: 6250000 }), { time: 6000, down: 100, up: 10 });
+ assert.equal(metrics.rate(before, { ...before, device: 'pppoe-wan', time: 6000 }), null);
+ assert.equal(metrics.rate({ ...before, rx: 100 }, { ...before, time: 6000, rx: 5 }), null);
+ assert.equal(metrics.rate(before, { ...before, time: 61000 }), null);
+ assert.equal(metrics.rate(before, { ...before, time: 6000, rx: undefined }), null);
+ assert.equal(metrics.count('0\n'), 0); assert.equal(metrics.count(''), null); assert.equal(metrics.count('error'), null);
+ assert.equal(metrics.append(Array(60).fill(null), { down: 1 }).length, 60);
+ assert.equal(metrics.wan([{ interface: 'lan' }, { interface: 'wan', l3_device: 'pppoe-wan' }]).l3_device, 'pppoe-wan');
+ assert.equal(metrics.wan([{ interface: 'uplink', route: [{ target: '::' }] }]).interface, 'uplink');
+ const timers = new Map(); let next = 0, resets = 0, calls = 0, release;
+ const environment = { setTimeout(fn, delay) { const id = ++next; timers.set(id, { fn, delay }); return id; }, clearTimeout(id) { timers.delete(id); } };
+ const scheduler = new Scheduler(() => { calls++; return new Promise(r => release = r); }, () => resets++, environment);
+ scheduler.plan(0); assert.equal(timers.size, 1);
+ const first = scheduler.refresh();
+ await scheduler.refresh(); assert.equal(calls, 1, 'collector overlap');
+ scheduler.visibility(true); release(); await first; assert.equal(timers.size, 0, 'hidden polling');
+ scheduler.visibility(false); assert.equal(timers.size, 1);
+ scheduler.pause(true); assert.equal(timers.size, 0);
+ await scheduler.refresh(); assert.equal(calls, 1, 'paused polling');
+ scheduler.pause(false); scheduler.setInterval(0); assert.equal(timers.size, 0, 'manual polling');
+ const manual = scheduler.refresh(); release(); await manual; assert.equal(calls, 2); assert.equal(timers.size, 0);
+ scheduler.setInterval(5000); scheduler.collect = () => Promise.reject(new Error('fixture error'));
+ await scheduler.refresh(); assert.equal([...timers.values()][0].delay, 10000, 'failure backoff');
+ scheduler.stop(); assert.equal(timers.size, 0); assert.ok(resets >= 5);
+ console.log('PASS: CPU accounting, rate reset/gaps, NSS missing vs zero, bounded history, serial/hidden/manual polling and backoff');
+})().catch(error => { console.error(error); process.exitCode = 1; });
