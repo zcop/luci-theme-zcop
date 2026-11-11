@@ -1,0 +1,8 @@
+#!/bin/sh
+# Run after other themes. Select Zcop once, then preserve later user choices.
+uci set luci.themes.Zcop=/luci-static/zcop || exit 1
+if [ "$(uci -q get luci.main.zcop_default_applied)" != 1 ]; then
+	uci set luci.main.mediaurlbase=/luci-static/zcop || exit 1
+	uci set luci.main.zcop_default_applied=1 || exit 1
+fi
+uci commit luci

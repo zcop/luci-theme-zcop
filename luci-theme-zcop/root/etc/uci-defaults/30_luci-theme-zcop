@@ -1,7 +1,0 @@
-#!/bin/sh
-# Register the theme without replacing the operator's current choice.
-uci -q get luci.themes.Zcop >/dev/null || {
-	uci set luci.themes.Zcop=/luci-static/zcop
-	uci commit luci
-}
-exit 0

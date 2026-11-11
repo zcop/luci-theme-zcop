@@ -51,8 +51,10 @@ directories can also be symlinked into another prepared build tree.
 
 ## Select the theme
 
-Installing registers **Zcop** under LuCI's language/style settings and preserves
-the currently selected theme. Select it there, or run explicitly on the router:
+Installing registers **Zcop** under LuCI's language/style settings and selects
+it as the default once. The registration script runs after Bootstrap and Argon.
+Later upgrades preserve your manual theme choice, using the
+`luci.main.zcop_default_applied` marker. To select Zcop manually on the router:
 
 ```sh
 uci set luci.main.mediaurlbase='/luci-static/zcop'
