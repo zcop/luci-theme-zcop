@@ -222,23 +222,26 @@ return view.extend({
   const traffic = section(_('Network activity'), [
    E('div', { 'class': 'zc-traffic-values' }, [pair(_('Download'), rate(this.traffic?.down)), pair(_('Upload'), rate(this.traffic?.up))]),
    trafficMessage ? E('div', { 'class': 'zc-traffic-empty' }, trafficMessage) : this.chart(),
-   E('div', { 'class': 'zc-chart-caption' }, [E('span', {}, trafficMessage ? _('No current rate')
-    : _('Recent samples') + ' · ' + _('Scale') + ': ' + number(peak) + ' Mbps'),
-    E('span', {}, wan?.l3_device || _('No WAN device'))]),
-   E('p', { 'class': 'zc-note' }, _('WAN interface counters; accelerated traffic coverage is unverified.'))
+   trafficMessage ? null : E('div', { 'class': 'zc-chart-caption', title: _('WAN interface counters; accelerated traffic coverage is unverified.') }, [
+    E('span', {}, _('Scale') + ': ' + number(peak) + ' Mbps'), E('span', {}, wan.l3_device)])
   ], 'traffic');
   const logical = (current('interfaces') || []).filter(iface => iface.interface !== 'loopback');
   const interfacesSection = section(_('Interfaces'), [
-   logical.length ? E('div', { 'class': 'zc-interfaces' }, logical.map(iface => {
-    const addresses = (iface['ipv4-address'] || []).concat(iface['ipv6-address'] || []).map(a => a.address).filter(Boolean);
-    return E('div', { 'class': 'zc-interface' }, [
-     E('div', { 'class': 'zc-interface-heading' }, [E('strong', {}, iface.interface),
-      status(iface.up === true ? _('Up') : iface.up === false ? _('Down') : _('Unavailable'), iface.up === true ? 'up' : 'neutral')]),
-     E('div', { 'class': 'zc-interface-detail' }, [E('span', {}, [iface.proto, iface.l3_device || iface.device].filter(Boolean).join(' · ') || '—'),
-      E('span', {}, addresses.join(' · ') || '—')])]);
-   })) : E('p', { 'class': 'zc-note' }, current('interfaces') ? _('No interfaces configured') : _('Interface data unavailable')),
-   E('p', { 'class': 'zc-note' }, _('Interface up does not verify Internet access.'))
+   logical.length ? E('table', { 'class': 'zc-interfaces' }, [
+    E('thead', {}, E('tr', {}, [_('Interface'), _('State'), _('Protocol'), _('Device'), _('Addresses')].map(label => E('th', { scope: 'col' }, label)))),
+    E('tbody', {}, logical.map(iface => {
+     const addresses = (iface['ipv4-address'] || []).concat(iface['ipv6-address'] || []).map(a => a.address).filter(Boolean);
+     return E('tr', { 'class': 'zc-interface' }, [
+      E('td', { 'data-label': _('Interface') }, E('strong', {}, iface.interface)),
+      E('td', { 'data-label': _('State') }, status(iface.up === true ? _('Up') : iface.up === false ? _('Down') : _('Unavailable'), iface.up === true ? 'up' : 'neutral')),
+      E('td', { 'data-label': _('Protocol') }, iface.proto || '—'),
+      E('td', { 'data-label': _('Device') }, iface.l3_device || iface.device || '—'),
+      E('td', { 'class': 'zc-interface-addresses', 'data-label': _('Addresses') }, addresses.length ? addresses.map(address => E('span', {}, address)) : '—')]);
+    }))
+   ]) : E('p', { 'class': 'zc-note' }, current('interfaces') ? _('No interfaces configured') : _('Interface data unavailable'))
   ], 'interfaces-section');
+  if (logical.length) interfacesSection.querySelector('h3').append(E('span', { 'class': 'zc-interface-count' },
+   logical.length + ' ' + _('total') + ' · ' + logical.filter(iface => iface.up === true).length + ' ' + _('up')));
   const links = Object.entries(current('devices') || {}).filter(([name]) => /^(lan\d+|wan\d*)$/.test(name))
    .sort(([a], [b]) => Number(b.startsWith('wan')) - Number(a.startsWith('wan')) || a.localeCompare(b, undefined, { numeric: true }));
   const ports = section(_('Ports & Wi-Fi'), [
@@ -271,8 +274,9 @@ return view.extend({
    pair(_('IPv6 leases'), Array.isArray(dhcp?.dhcp6_leases) ? String(dhcp.dhcp6_leases.length) : '—'),
    E('span', { 'class': 'zc-note' }, _('Leases are not a count of online clients.'))]);
   this.body.replaceChildren(
-   E('div', { 'class': 'zc-pane zc-pane-device' }, [deviceInfo, connection]),
-   E('div', { 'class': 'zc-pane zc-pane-network' }, [traffic, interfacesSection]),
+   E('div', { 'class': 'zc-pane zc-pane-device' }, [deviceInfo]),
+   E('div', { 'class': 'zc-pane zc-pane-network' }, [traffic, connection]),
+   interfacesSection,
    E('div', { 'class': 'zc-pane zc-pane-metrics' }, [cpuPanel, ramPanel, ports]), local);
  },
 

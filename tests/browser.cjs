@@ -280,7 +280,34 @@ const server = http.createServer((req, res) => {
    const command=await page.locator('.zcop-command').boundingBox();
    assert.ok(notice.x>=command.x && notice.x+notice.width<=command.x+command.width+1,'notice escaped fixed bar at '+width);
   }
+  await page.evaluate(async () => {
+   fixture.overrides = {'network.interface.dump':{interface:Array.from({length:16},(_,i)=>({
+    interface:i===0?'lan':i===1?'wan':i===2?'vpn-office-long-name':i===3?'gre-tunnel':'vpn_'+i,
+    up:i%3!==0,proto:i<2?'static':i===3?'gre':'wireguard',l3_device:i===0?'br-lan':i===1?'wan':'tunnel'+i,
+    'ipv4-address':[{address:'192.0.2.'+(i+1)}],
+    'ipv6-address':[{address:'2001:db8:1234:5678:9abc:def0:1234:'+i.toString(16)}]
+   }))}};
+   dashboard.due={};await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('.zc-interface').count(),16,'logical interfaces were omitted');
+  assert.match(await page.locator('.zc-interface-count').innerText(),/16 total · 10 up/);
+  assert.equal(await page.locator('.zc-interfaces th').count(),5);
+  assert.equal(await page.getByText('No current rate',{exact:true}).count(),0);
+  assert.equal(await page.getByText('No WAN device',{exact:true}).count(),0);
+  for(const width of [1536,1024,768,390]){
+   await page.setViewportSize({width,height:900});
+   assert.equal(await page.locator('.zcop-content').evaluate(e=>e.scrollWidth>e.clientWidth+2),false,'VPN list overflow at '+width);
+   if(width===1536){
+    const interfaces=await page.locator('.zc-interfaces-section').boundingBox(),device=await page.locator('.zc-pane-device').boundingBox();
+    assert.ok(interfaces.width>device.width*1.9,'interfaces did not gain width');
+    assert.ok((await page.locator('.zc-interface').first().boundingBox()).height<55,'wide rows are still vertically stacked');
+   }
+   await page.locator('.zc-interface').last().scrollIntoViewIfNeeded();
+   assert.ok(await page.locator('.zc-interface').last().isVisible(),'last VPN interface unreachable');
+  }
   await page.evaluate(async () => {fixture.overrides={};dashboard.due={};await dashboard.scheduler.refresh();});
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('.zcop-content').evaluate(e=>e.scrollTo(0,0));
   await page.getByRole('button', { name: 'Toggle navigation' }).click();
   assert.equal(await page.getByRole('button', { name: 'Toggle navigation' }).getAttribute('aria-expanded'), 'true');
   await page.getByRole('link', {name:'Services',exact:true}).focus();

@@ -1,5 +1,22 @@
 # Validation
 
+## Wider interface list and compact activity, 2026-11-12
+
+Dashboard version: 0.4.2-r1. Theme remains0.1.4-r1.
+
+- Interfaces span the device/network columns and use compact rows with separate
+  name, state, protocol, device and address columns. A total/up count summarizes
+  larger lists. Narrow frames use labeled fields with no horizontal overflow.
+- Network status moves below the compact WAN activity summary. Repeated idle
+  captions and the long accounting paragraph were removed; accounting limits
+  remain in the active chart-caption tooltip. No data source/polling change.
+- Unit and actual-module browser suites pass, including16 simulated netifd
+  interfaces with VPN/tunnel names and long IPv6 values at1536,1024,768,390px.
+  All rows remain present and the final row is reachable; wide rows stay compact.
+- This verifies rendering of larger configurations. No actual VPN or tunnel was
+  created or traffic-tested by the layout change.
+
+
 ## Footer, stable metrics and processor details, 2026-11-12
 
 Dashboard version: 0.4.1-r1. Theme remains0.1.4-r1.

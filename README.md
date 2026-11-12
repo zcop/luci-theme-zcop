@@ -89,8 +89,9 @@ settings when that page is permitted. It does not occupy dashboard content.
 
 The dashboard uses its own presentation over existing authenticated LuCI RPC
 data. It uses connected panes with shared divider lines: device details and disk on
-the left, WAN activity and logical interfaces in the wider center, and compact
-CPU/RAM trends plus ports/radios on the right. A quiet background separates
+the left, compact WAN activity/status in the center, and CPU/RAM trends plus
+ports/radios on the right. A wider interface table spans the left and center
+below those summaries, with compact rows for additional VPN/tunnel interfaces. A quiet background separates
 the device pane without rounded cards. Panes reflow as the frame narrows.
 Refresh controls sit in the page footer. CPU/RAM sections retain their size
 through pending/error states. Processor architecture, present-core count and
@@ -108,8 +109,9 @@ lease counts do not claim that clients are online.
   request can finish. Failures back off; manual refresh is available.
 - At most 60 numeric samples per WAN, CPU and RAM history in the browser. No RRD, collectd, database,
   router-side history, packet capture, flow dump, Wi-Fi scan or Internet probe.
-- WAN traffic is labelled as reported interface counters. NSS coverage must be
-  checked on the target before treating it as complete accelerated accounting.
+- WAN rates use reported interface counters. The chart-caption tooltip retains
+  the unverified NSS-accounting limitation; complete accelerated accounting
+  still requires validation on the target.
 - Available memory means Linux `MemAvailable`, not physical RAM or `MemFree`.
   Missing counters stay unavailable rather than displaying an invented zero.
 

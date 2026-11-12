@@ -1,4 +1,4 @@
-# Compact overview, revision 06
+# Compact overview, revision 07
 
 The overview summarizes the router for a quick glance. It uses its own
 presentation over existing authenticated LuCI RPC snapshots; configuration
@@ -12,17 +12,26 @@ shared divider lines, compact label/value rows and small plots next to values.
 The router adapts that structure into three adjacent panes of unequal width:
 
 - **Device pane**: model, processor/core count, firmware/build, kernel, uptime
-  and writable-disk usage, with WAN state/addresses and acceleration below.
-- **Network pane**: a wider download/upload plot and numeric rates, followed
-  by logical interfaces with protocol, device, state and addresses.
+  and writable-disk usage.
+- **Network pane**: compact download/upload rates and plot, followed by WAN
+  state, assigned addresses, gateway and acceleration summary.
 - **Metrics pane**: CPU and RAM percentages with small recent-sample plots,
   followed by physical ports and radio/network/channel summaries.
+
+**Interfaces** span the combined width of the device and network panes below
+those summaries. Five columns show name, state, protocol, device and addresses.
+A small total/up count makes larger configurations easy to scan. The list is
+not capped: new configured VPN/tunnel interfaces use the same rows. On a narrow
+frame each row reflows into labeled fields; only the main content frame scrolls.
+This uses netifd's logical interface dump, not discovery of unmanaged devices.
 
 Panes have shared vertical rules. Their sections use horizontal rules at natural
 content boundaries, without enclosing outlines, corner rounding or gutters.
 The device pane has a slightly different background. Section heights follow
 content independently rather than forcing a uniform row of boxes. A down WAN
-uses a short message in place of an empty chart-height placeholder.
+uses a short message in place of an empty chart-height placeholder. Repeated
+No current rate / No WAN device lines and a long accounting paragraph are
+omitted; the latter remains in the live chart-caption tooltip.
 
 At intermediate widths the metrics move below the first two panes. A phone
 uses one vertical stack. Fixed sidebar/section menus and the stable outer main
