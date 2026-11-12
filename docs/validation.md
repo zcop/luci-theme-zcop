@@ -1,5 +1,18 @@
 # Validation
 
+## Selected tabs after indicator resize, 2026-11-12
+
+Theme version: 0.1.6-r1. Dashboard remains0.4.2-r1.
+
+- LuCI can insert its Refreshing indicator after navigation renders, reducing
+  the tab area's width. A browser ResizeObserver keeps each selected tab visible
+  after that change or a viewport resize, without scrolling the content frame.
+- Unit and actual-module browser checks pass, including a delayed indicator at
+  phone width. A browser-only source override also passes on the live router's
+  registered pages, including both log pages and native configuration pages.
+- This is theme presentation only; original LuCI pages, backend routes, access
+  checks and network configuration are unchanged.
+
 ## Status-page redistribution, 2026-11-12
 
 Theme version: 0.1.5-r1. Dashboard remains0.4.2-r1.

@@ -17,6 +17,12 @@ return baseclass.extend({
     this.toggle.focus();
    }
   });
+  // LuCI adds its status indicators asynchronously, changing the space left
+  // for tabs after initial render. Keep selected tabs visible on later resize.
+  this.tabsObserver = new ResizeObserver(() => {
+   document.querySelectorAll('#tabmenu .zcop-page-tabs').forEach(row => this.revealActiveTab(row));
+  });
+  this.tabsObserver.observe(document.querySelector('#tabmenu'));
   ui.menu.load().then(tree => this.render(tree)).catch(() => {
    document.querySelector('#topmenu').append(E('p', {}, _('Navigation could not be loaded. Reload this page.')));
   });
@@ -149,6 +155,14 @@ return baseclass.extend({
   return active;
  },
 
+ revealActiveTab(row) {
+  const current = row.querySelector('a[aria-current=page]');
+  if (!current) return;
+  const item = current.getBoundingClientRect(), bounds = row.getBoundingClientRect();
+  if (item.right > bounds.right) row.scrollLeft += item.right - bounds.right;
+  else if (item.left < bounds.left) row.scrollLeft += item.left - bounds.left;
+ },
+
  renderPages(node, path) {
   const children = this.menuChildren(node);
   if (!children.length) return;
@@ -163,12 +177,7 @@ return baseclass.extend({
    ]));
   });
   document.querySelector('#tabmenu').append(row);
-  const current = row.querySelector('a[aria-current=page]');
-  if (current) {
-   const item = current.getBoundingClientRect(), bounds = row.getBoundingClientRect();
-   if (item.right > bounds.right) row.scrollLeft += item.right - bounds.right;
-   else if (item.left < bounds.left) row.scrollLeft += item.left - bounds.left;
-  }
+  this.revealActiveTab(row);
   if (active) {
    this.renderPages(active, activeEntry.path);
    // Preserve headings for accessibility; avoid repeating the selected page.

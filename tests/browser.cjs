@@ -221,8 +221,12 @@ const server = http.createServer((req, res) => {
   assert.equal(await page.getByRole('link',{name:'Connectivity',exact:true}).count(),0,'configuration-only entry invented for read-only user');
   await page.evaluate(()=>{tree=savedMenu;renderMenu(['admin','status','zcop_dashboard']);});
   await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>document.querySelector('#indicators').replaceChildren());
   await page.evaluate(()=>renderMenu(['admin','status','logs','dmesg']));
   assert.ok(await page.locator('#tabmenu a[aria-current="page"]').evaluateAll(links=>links.every(link=>{const a=link.getBoundingClientRect(),b=link.closest('ul').getBoundingClientRect();return a.right<=b.right+1&&a.left>=b.left-1;})),'relocated selected tab is outside mobile menu');
+  await page.evaluate(()=>document.querySelector('#indicators').append(E('span',{},'Refreshing')));
+  await page.clock.runFor(50);
+  assert.ok(await page.locator('#tabmenu a[aria-current="page"]').evaluateAll(links=>links.every(link=>{const a=link.getBoundingClientRect(),b=link.closest('ul').getBoundingClientRect();return a.right<=b.right+1&&a.left>=b.left-1;})),'late LuCI indicator clipped the selected mobile tab');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await page.setViewportSize({width:1440,height:940});
   await page.evaluate(()=>renderMenu(['admin','status','zcop_dashboard']));
