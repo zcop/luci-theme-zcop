@@ -190,7 +190,7 @@ return view.extend({
    E('strong', { 'class': 'zc-util-value' }, Number.isFinite(this.cpuBusy) ? number(this.cpuBusy) + '%' : '—'),
    E('div', { 'class': 'zc-trend-slot' }, this.sparkline(Number.isFinite(this.cpuBusy) ? this.cpuHistory : [], _('Recent CPU busy samples'))),
    E('p', { 'class': 'zc-note' }, cpuPending ? _('Waiting for the next CPU sample')
-    : !Number.isFinite(this.cpuBusy) ? _('CPU data unavailable') : _('Busy time') + (cores ? ' · ' + cores + ' ' + _('cores') : ''))
+    : !Number.isFinite(this.cpuBusy) ? _('CPU data unavailable') : _('Collected samples') + (cores ? ' · ' + cores + ' ' + _('cores') : ''))
   ], 'cpu');
   const ramPanel = section(_('RAM usage'), [
    E('strong', { 'class': 'zc-util-value' }, memoryUsed === null ? '—' : number(memoryUsed / memory.total * 100) + '%'),
@@ -287,10 +287,14 @@ return view.extend({
   return { total, avail, percent: valid ? (total - free) / total * 100 : null };
  },
  sparkline(samples, label) {
+  // This is sample history, not an elapsed-time axis. Omit uncollected periods
+  // without changing the stored history or inventing zero-valued readings.
+  samples = samples.filter(Number.isFinite);
   const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', '0 0 160 48'); svg.setAttribute('class', 'zc-sparkline');
   svg.setAttribute('preserveAspectRatio', 'none');
-  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label + ' (0–100%)');
+  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label + ' (0–100%). ' + _('Collected samples; pauses and unavailable readings are omitted.'));
+  const title = document.createElementNS(ns, 'title'); title.textContent = _('Collected samples; pauses and unavailable readings are omitted.'); svg.append(title);
   const segments = []; let segment = [];
   samples.forEach((value, i) => {
    if (!Number.isFinite(value)) {

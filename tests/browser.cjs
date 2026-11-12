@@ -165,9 +165,10 @@ const server = http.createServer((req, res) => {
    const gap = area([100,100,null,100,100]), middle = area([50,50]);
    const result = [gap.isPointInFill(new DOMPoint(20,25)), gap.isPointInFill(new DOMPoint(80,25)),
     gap.isPointInFill(new DOMPoint(140,25)), middle.isPointInFill(new DOMPoint(80,30)),
-    middle.isPointInFill(new DOMPoint(80,15)), area([35]).getAttribute('d'), area([]).getAttribute('d')];
+    middle.isPointInFill(new DOMPoint(80,15)), area([35]).getAttribute('d'), area([]).getAttribute('d'),
+    area([null,50,50]).isPointInFill(new DOMPoint(20,30))];
    charts.forEach(chart => chart.remove()); return result;
-  }), [true,false,true,true,false,'',''], 'resource fill bridges missing history or changes the fixed percentage scale');
+  }), [true,true,true,true,false,'','',true], 'sample history did not omit missing/startup periods or changed the fixed percentage scale');
   const historyBefore = await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]);
   await page.evaluate(() => {dashboard.draw();dashboard.draw();});
   assert.deepEqual(await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]),historyBefore,'redrawing duplicates resource samples');

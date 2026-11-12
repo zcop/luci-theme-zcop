@@ -47,8 +47,10 @@ does not move neighboring sections.
 CPU/RAM plots use existing15-second snapshots, without any additional request.
 Each browser-local array is limited to60 numeric samples/gap markers. CPU/RAM
 plots use a fixed0-100% scale with labeled0/50/100% guides and a subtle area
-fill. A single sample is a point; missing values and resets break both the
-plotted line and its fill. Plots span
+fill. A single sample is a point. Paused or unavailable readings are omitted
+from the plotted series, and adjacent collected readings are connected. These
+are sample-history plots, not continuous elapsed-time axes. The stored arrays
+retain gap markers; missing values are never converted to zero. Plots span
 the samples actually collected, without claiming a fixed time duration or
 inventing data to fill startup history.
 

@@ -1,5 +1,19 @@
 # Validation
 
+## Compact collected-sample history, 2026-11-12
+
+Dashboard version: 0.4.4-r1. Theme remains0.1.7-r1.
+
+- CPU/RAM plots omit unavailable readings, including the initial CPU baseline
+  and periods when the page was hidden. Actual samples are drawn consecutively
+  on the fixed0-100% scale. CPU text and plot tooltips identify collected-sample
+  history rather than continuous elapsed time.
+- Source arrays retain their original gap markers and bounded length. No zero
+  readings are invented, a single sample remains a point, and the hidden-page
+  pause policy and collection intervals are unchanged.
+- Unit/browser checks cover omitted internal and initial gaps, fixed50% scale,
+  empty/single-sample history, stable layout and the existing polling behavior.
+
 ## Filled resource history, 2026-11-12
 
 Dashboard version: 0.4.3-r1. Theme remains0.1.7-r1.
