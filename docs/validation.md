@@ -1,5 +1,24 @@
 # Validation
 
+## Connected panes, 2026-11-12
+
+Dashboard version: 0.4.0-r1. Theme remains0.1.3-r1.
+
+The supplied visual reference informed connected panes with shared separators,
+compact data rows and integrated small charts. Device/disk/network summary,
+WAN activity/interfaces and CPU/RAM/ports occupy unequal-width columns, with
+independent section heights and no card gutters. The supplied image is not
+included in the repository.
+
+- Unit and actual-module browser checks pass, including adjacent unboxed panes,
+  unequal widths, long values and desktop/tablet/phone reflow.
+- CPU/RAM trends use existing snapshots, with at most60 entries each. Tests
+  check bounded histories and ensure unrelated redraws do not duplicate samples.
+  Missing/initial data remains unknown; no startup history is fabricated.
+- Collector, RPC sources, refresh intervals, ACLs and dependencies are unchanged.
+  Source/package screenshots continue to use explicitly marked synthetic data.
+
+
 ## Compact sections, 2026-11-12
 
 Dashboard version: 0.3.0-r1. Theme remains 0.1.3-r1.

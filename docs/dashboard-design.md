@@ -1,4 +1,4 @@
-# Compact overview, revision 05
+# Compact overview, revision 06
 
 The overview summarizes the router for a quick glance. It uses its own
 presentation over existing authenticated LuCI RPC snapshots; configuration
@@ -7,38 +7,38 @@ stable main frame and three palettes.
 
 ## Content and arrangement
 
-The page uses open sections, not a card grid. Thin horizontal rules establish
-alignment, and the network summary has a quiet inset background. Sections have
-no rounded corners or enclosing outlines, and no shared minimum height.
+The user-supplied dashboard reference establishes a continuous workspace with
+shared divider lines, compact label/value rows and small plots next to values.
+The router adapts that structure into three adjacent panes of unequal width:
 
-At wide content widths the first row uses a 3:2:2 proportion:
+- **Device pane**: model, processor/core count, firmware/build, kernel, uptime
+  and writable-disk usage, with WAN state/addresses and acceleration below.
+- **Network pane**: a wider download/upload plot and numeric rates, followed
+  by logical interfaces with protocol, device, state and addresses.
+- **Metrics pane**: CPU and RAM percentages with small recent-sample plots,
+  followed by physical ports and radio/network/channel summaries.
 
-- **Device**: model, hostname, reported processor/core count, target platform,
-  firmware/build, kernel and uptime. Hardware identity is read once per page;
-  core count comes from the already collected CPU-time snapshot.
-- **Utilization**: three compact meters for CPU busy time, RAM and writable disk,
-  each with its percentage and relevant capacity/free values.
-- **Network status**: WAN state/protocol, IPv4/IPv6 addresses, gateway and active
-  ECM accelerated-flow counts. This is interface state, not an Internet test.
+Panes have shared vertical rules. Their sections use horizontal rules at natural
+content boundaries, without enclosing outlines, corner rounding or gutters.
+The device pane has a slightly different background. Section heights follow
+content independently rather than forcing a uniform row of boxes. A down WAN
+uses a short message in place of an empty chart-height placeholder.
 
-The second row gives more width to network activity, followed by compact
-logical-interface and physical-port sections:
+At intermediate widths the metrics move below the first two panes. A phone
+uses one vertical stack. Fixed sidebar/section menus and the stable outer main
+frame remain supplied by the theme. The DHCP lease footer labels leases rather
+than claiming online clients.
 
-- **Network activity**: WAN download/upload rates and one plot. A disconnected
-  or unsampled WAN has a short message instead of an empty chart-sized gap.
-- **Interfaces**: logical interface name, status, protocol, device and addresses.
-- **Ports & Wi-Fi**: physical Ethernet carrier/speed and radio/network/channel
-  summaries. Port information is separate from logical interface information.
-
-DHCP lease counts remain a small footer, labelled as leases rather than online
-clients. The number of interfaces/radios and length of values determine section
-height; they are not stretched to match another section. Container queries
-reflow to two columns and then one as the content frame narrows.
+CPU/RAM plots use existing15-second snapshots, without any additional request.
+Each browser-local array is limited to60 numeric samples/gap markers. A single
+sample is a point; missing values and resets break the plotted line. Plots span
+the samples actually collected, without claiming a fixed time duration or
+inventing data to fill startup history.
 
 There is no widget editor, drag/resize library, client inventory, live event
-stream, network scan or traffic classification. Screenshots in this directory
-render the actual application with explicitly marked synthetic RPC fixtures.
-`preview/index.html` is the earlier static concept, not a live feature list.
+stream, network scan or traffic classification. Documentation screenshots render
+the actual application with explicitly marked synthetic RPC fixtures. The
+user-supplied reference image is not redistributed in this repository.
 
 ## Data and resource budget
 
@@ -55,7 +55,7 @@ database. One collector runs at a time; numeric history stays in the browser.
 | Writable storage | 60 seconds | Existing mount summary |
 
 Collection pauses when hidden, leaving the page or explicitly paused. A request
-already in flight can finish. Failures back off. History is limited to60 samples.
+already in flight can finish. Failures back off. Each of the WAN, CPU and RAM histories is limited to60 entries.
 CPU busy percentage uses CPU-time deltas, not load average or a shell top command.
 
 ## Accuracy

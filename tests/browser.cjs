@@ -104,20 +104,20 @@ const server = http.createServer((req, res) => {
    document.dispatchEvent(new Event('luci-loaded'));
    await dashboard.scheduler.refresh();
   }, sources);
-  assert.match(await page.locator('.zc-system').innerText(), /Waiting for the next CPU sample/);
+  assert.match(await page.locator('.zc-cpu').innerText(), /Waiting for the next CPU sample/);
   assert.equal(await page.locator('.zc-traffic-empty').innerText(), 'Waiting for traffic samples');
   assert.equal(await page.locator('.zc-traffic-values strong').allTextContents().then(v=>v.join(',')), '—,—');
   await page.clock.runFor(5000);
   await page.evaluate(() => dashboard.scheduler.refresh());
   await page.clock.runFor(5000);
   await page.evaluate(() => dashboard.scheduler.refresh());
-  assert.equal(await page.locator('.zc-section').count(), 6);
+  assert.equal(await page.locator('.zc-section').count(), 7);
   assert.equal(await page.locator('.zc-connection .zc-state').innerText(), 'WAN up');
   assert.match(await page.locator('.zc-addresses').innerText(), /192\.0\.2\.2/);
   assert.equal(await page.locator('.zc-radio-heading strong').allTextContents().then(v=>v.join(',')), '2.4 GHz,5 GHz');
   assert.equal(await page.locator('.zc-radio .zc-state-up').count(), 2);
-  assert.match(await page.locator('.zc-system .zc-gauge').last().innerText(), /53\.1%/);
-  assert.match(await page.locator('.zc-system .zc-gauge').last().innerText(), /29\.0 MiB free \/ 64\.0 MiB/);
+  assert.match(await page.locator('.zc-disk .zc-gauge').innerText(), /53\.1%/);
+  assert.match(await page.locator('.zc-disk .zc-gauge').innerText(), /29\.0 MiB free \/ 64\.0 MiB/);
   assert.match(await page.locator('.zc-identity').innerText(), /6\.18\.60/);
   assert.match(await page.locator('.zc-interface').filter({hasText:'br-lan'}).innerText(), /192\.0\.2\.1/);
   assert.match(await page.locator('.zc-traffic-values').innerText(), /82\.4 Mbps/);
@@ -127,6 +127,11 @@ const server = http.createServer((req, res) => {
   await page.evaluate(() => dashboard.scheduler.refresh());
   assert.equal(await page.evaluate(() => dashboard.history.length), 60, 'graph history is not bounded');
   assert.ok(await page.evaluate(() => dashboard.cpuBusy > 0 && dashboard.cpuBusy < 100), 'CPU time sampling failed');
+  assert.ok(await page.evaluate(() => dashboard.cpuHistory.length <= 60 && dashboard.ramHistory.length <= 60), 'resource histories are not bounded');
+  assert.equal(await page.locator('.zc-sparkline').count(), 2);
+  const historyBefore = await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]);
+  await page.evaluate(() => {dashboard.draw();dashboard.draw();});
+  assert.deepEqual(await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]),historyBefore,'redrawing duplicates resource samples');
   const tabGeometry = await page.getByRole('link', { name: 'Dashboard', exact: true }).evaluate(e => ({ link: e.getBoundingClientRect().height, row: e.parentElement.getBoundingClientRect().height }));
   assert.ok(tabGeometry.row >= tabGeometry.link, 'menu link is vertically clipped');
   for (const mode of ['light','dark','luxury']) {
@@ -138,9 +143,10 @@ const server = http.createServer((req, res) => {
    return css.borderRadius === '0px' && css.borderLeftWidth === '0px' && css.borderRightWidth === '0px';
   }));
   assert.ok(sectionStyle, 'overview sections reverted to boxed cards');
-  const identityBox = await page.locator('.zc-identity').boundingBox();
-  const resourceBox = await page.locator('.zc-system').boundingBox();
-  assert.ok(identityBox.width > resourceBox.width * 1.3, 'sections lost content-based widths');
+  const devicePane = await page.locator('.zc-pane-device').boundingBox();
+  const networkPane = await page.locator('.zc-pane-network').boundingBox();
+  assert.ok(networkPane.width > devicePane.width * 1.15, 'panes lost content-based widths');
+  assert.ok(Math.abs(networkPane.x - devicePane.x - devicePane.width) < 1, 'panes have a card-style gutter');
   await page.evaluate(() => { L.env.dispatchpath = ['admin','network','plugin','detail']; document.querySelector('#topmenu').replaceChildren(); document.querySelector('#tabmenu').replaceChildren(); menu.render(tree); });
   assert.equal(await page.getByRole('link', { name: 'Third-party app', exact: true }).count(), 1);
   assert.equal(await page.getByRole('link', { name: 'Deep settings', exact: true }).count(), 1);
@@ -169,7 +175,7 @@ const server = http.createServer((req, res) => {
   assert.match(await page.locator('.zc-refresh-status').innerText(), /unavailable or stale/);
   assert.equal(await page.locator('.zc-traffic-empty').innerText(), 'WAN status unavailable');
   assert.equal(await page.locator('.zc-traffic-values strong').allTextContents().then(v=>v.join(',')), '—,—');
-  assert.match(await page.locator('.zc-system').innerText(), /CPU data unavailable/);
+  assert.match(await page.locator('.zc-cpu').innerText(), /CPU data unavailable/);
   await page.evaluate(async () => { fixture.fail = false; dashboard.due = {}; await dashboard.scheduler.refresh(); });
   // Unsupported values must stay unknown; known empty lists and zero flows
   // must remain valid zeros. Physical link and Internet reachability differ.
@@ -194,8 +200,8 @@ const server = http.createServer((req, res) => {
    fixture.overrides['luci.getMountPoints'] = {result:[]};
    dashboard.due={}; await dashboard.scheduler.refresh();
   });
-  assert.match(await page.locator('.zc-system').innerText(), /Memory data unavailable/);
-  assert.match(await page.locator('.zc-system').innerText(), /Storage data unavailable/);
+  assert.match(await page.locator('.zc-memory').innerText(), /Memory data unavailable/);
+  assert.match(await page.locator('.zc-disk').innerText(), /Storage data unavailable/);
   await page.evaluate(async () => {
    fixture.overrides['luci-rpc.getDHCPLeases'] = {dhcp_leases:[],dhcp6_leases:[]};
    fixture.overrides['file.read'] = {data:'0\n'};

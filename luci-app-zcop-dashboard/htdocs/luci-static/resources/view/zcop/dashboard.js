@@ -44,6 +44,8 @@ return view.extend({
   this.due = {};
   this.latestDevice = null;
   this.history = [];
+  this.cpuHistory = [];
+  this.ramHistory = [];
   this.generation = 0;
   this.failures = {};
   this.body = E('div', { 'class': 'zc-dashboard-grid' });
@@ -51,6 +53,8 @@ return view.extend({
   this.scheduler = Scheduler.create(() => this.collect(), () => {
    this.generation++;
    this.cpuBaseline = this.wanBaseline = null;
+   this.cpuHistory = metrics.append(this.cpuHistory, null);
+   this.ramHistory = metrics.append(this.ramHistory, null);
    this.due = {};
   });
   this.scheduler.hidden = document.hidden;
@@ -123,6 +127,7 @@ return view.extend({
   if (state.cpu?.time !== this.cpuTime) {
    const sample = metrics.cpu(cpu);
    this.cpuBusy = metrics.cpuPercent(this.cpuBaseline, sample);
+   this.cpuHistory = metrics.append(this.cpuHistory, this.cpuBusy);
    this.cpuBaseline = sample; this.cpuTime = state.cpu?.time;
   }
   const memory = current('system')?.memory || {};
@@ -164,16 +169,27 @@ return view.extend({
   const memoryUsed = Number.isFinite(memory.total) && memory.total > 0 && Number.isFinite(memory.available)
    && memory.available >= 0 && memory.available <= memory.total ? memory.total - memory.available : null;
   const disk = this.storage(current('mounts'));
-  const resources = section(_('Utilization'), [
-   gauge(_('CPU'), Number.isFinite(this.cpuBusy) ? number(this.cpuBusy) + '%' : '—', this.cpuBusy,
-    cpuPending ? _('Waiting for the next CPU sample') : !Number.isFinite(this.cpuBusy) ? _('CPU data unavailable') : _('Busy time')),
-   gauge(_('RAM'), memoryUsed === null ? '—' : number(memoryUsed / memory.total * 100) + '%',
-    memoryUsed === null ? null : memoryUsed / memory.total * 100,
-    memoryUsed === null ? _('Memory data unavailable') : mib(memory.available) + ' ' + _('available') + ' / ' + mib(memory.total)),
+  if (state.system?.time !== this.ramTime) {
+   if (this.ramTime && state.system.time - this.ramTime > 30000) this.ramHistory = metrics.append(this.ramHistory, null);
+   this.ramHistory = metrics.append(this.ramHistory, memoryUsed === null ? null : memoryUsed / memory.total * 100);
+   this.ramTime = state.system?.time;
+  }
+  const cpuPanel = section(_('CPU usage'), [
+   E('strong', { 'class': 'zc-util-value' }, Number.isFinite(this.cpuBusy) ? number(this.cpuBusy) + '%' : '—'),
+   Number.isFinite(this.cpuBusy) ? this.sparkline(this.cpuHistory, _('Recent CPU busy samples')) : null,
+   E('p', { 'class': 'zc-note' }, cpuPending ? _('Waiting for the next CPU sample')
+    : !Number.isFinite(this.cpuBusy) ? _('CPU data unavailable') : _('Busy time') + (cores ? ' · ' + cores + ' ' + _('cores') : ''))
+  ], 'cpu');
+  const ramPanel = section(_('RAM usage'), [
+   E('strong', { 'class': 'zc-util-value' }, memoryUsed === null ? '—' : number(memoryUsed / memory.total * 100) + '%'),
+   memoryUsed === null ? null : this.sparkline(this.ramHistory, _('Recent RAM usage samples')),
+   E('p', { 'class': 'zc-note' }, memoryUsed === null ? _('Memory data unavailable')
+    : mib(memory.available) + ' ' + _('available') + ' / ' + mib(memory.total) + ' ' + _('Linux RAM'))
+  ], 'memory');
+  deviceInfo.append(E('div', { 'class': 'zc-disk' }, [
    gauge(_('Disk'), disk.percent === null ? '—' : number(disk.percent) + '%', disk.percent,
     disk.percent === null ? _('Storage data unavailable') : mib(disk.avail) + ' ' + _('free') + ' / ' + mib(disk.total)),
-   E('p', { 'class': 'zc-note' }, _('RAM uses Linux available memory. Disk is writable overlay.'))
-  ], 'system');
+   E('p', { 'class': 'zc-note' }, _('Writable overlay'))]));
   const nss4 = metrics.count(current('nss4')), nss6 = metrics.count(current('nss6'));
   const wan6 = (current('interfaces') || []).find(iface => iface.up === true &&
    [wan?.interface + '6', wan?.interface + '_6'].includes(iface.interface));
@@ -242,7 +258,10 @@ return view.extend({
    pair(_('IPv4 leases'), Array.isArray(dhcp?.dhcp_leases) ? String(dhcp.dhcp_leases.length) : '—'),
    pair(_('IPv6 leases'), Array.isArray(dhcp?.dhcp6_leases) ? String(dhcp.dhcp6_leases.length) : '—'),
    E('span', { 'class': 'zc-note' }, _('Leases are not a count of online clients.'))]);
-  this.body.replaceChildren(deviceInfo, resources, connection, traffic, interfacesSection, ports, local);
+  this.body.replaceChildren(
+   E('div', { 'class': 'zc-pane zc-pane-device' }, [deviceInfo, connection]),
+   E('div', { 'class': 'zc-pane zc-pane-network' }, [traffic, interfacesSection]),
+   E('div', { 'class': 'zc-pane zc-pane-metrics' }, [cpuPanel, ramPanel, ports]), local);
  },
 
  storage(mountpoints) {
@@ -250,6 +269,26 @@ return view.extend({
   const total = mount?.size, free = mount?.free, avail = mount?.avail ?? free;
   const valid = Number.isFinite(total) && total > 0 && Number.isFinite(free) && free >= 0 && free <= total;
   return { total, avail, percent: valid ? (total - free) / total * 100 : null };
+ },
+ sparkline(samples, label) {
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 160 48'); svg.setAttribute('class', 'zc-sparkline');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label);
+  let connected = false, last = null;
+  const points = samples.map((value, i) => {
+   if (!Number.isFinite(value)) { connected = false; return ''; }
+   const x = samples.length > 1 ? i * 160 / (samples.length - 1) : 160, y = 45 - Math.max(0, Math.min(100, value)) * .42;
+   last = {x,y};
+   const point = (connected ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+   connected = true; return point;
+  }).join(' ');
+  const path = document.createElementNS(ns, 'path'); path.setAttribute('d', points); svg.append(path);
+  if (last) {
+   const dot = document.createElementNS(ns, 'circle');
+   dot.setAttribute('cx', last.x); dot.setAttribute('cy', last.y); dot.setAttribute('r', '1.4'); svg.append(dot);
+  }
+  return svg;
  },
  chart() {
   const ns = 'http://www.w3.org/2000/svg';
@@ -264,7 +303,7 @@ return view.extend({
    let connected = false;
    const points = samples.map((sample, i) => {
     if (!sample) { connected = false; return ''; }
-    const point = (connected ? 'L' : 'M') + (i * 600 / 59).toFixed(1) + ' ' + (145 - sample[direction] / max * 135).toFixed(1);
+    const point = (connected ? 'L' : 'M') + (i * 600 / Math.max(1, samples.length - 1)).toFixed(1) + ' ' + (145 - sample[direction] / max * 135).toFixed(1);
     connected = true; return point;
    }).join(' ');
    path.setAttribute('d', points); path.setAttribute('class', direction); svg.append(path);

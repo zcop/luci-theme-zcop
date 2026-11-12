@@ -82,10 +82,10 @@ registered LuCI sections, with arbitrary deeper subpages retained. The theme
 does not rewrite application URLs or replace UCI configuration workflows.
 
 The dashboard uses its own presentation over existing authenticated LuCI RPC
-data. It arranges open sections at unequal widths to fit their content: device
-specs, utilization and network status, followed by traffic, logical interfaces
-and physical ports/radios. Fine rules and a subtle background separate sections
-without rounded cards. The layout adapts to the available frame width.
+data. It uses connected panes with shared divider lines: device details and disk on
+the left, WAN activity and logical interfaces in the wider center, and compact
+CPU/RAM trends plus ports/radios on the right. A quiet background separates
+the device pane without rounded cards. Panes reflow as the frame narrows.
 Detailed configuration stays on the existing pages. Missing data is shown as
 unavailable; an interface being up does not claim Internet reachability, and
 lease counts do not claim that clients are online.
@@ -97,7 +97,7 @@ lease counts do not claim that clients are online.
 - One collector in flight; no sampling sleep and no shell `top` command.
 - Polling stops when paused, hidden or leaving the page. An already running
   request can finish. Failures back off; manual refresh is available.
-- At most 60 numeric traffic samples in the browser. No RRD, collectd, database,
+- At most 60 numeric samples per WAN, CPU and RAM history in the browser. No RRD, collectd, database,
   router-side history, packet capture, flow dump, Wi-Fi scan or Internet probe.
 - WAN traffic is labelled as reported interface counters. NSS coverage must be
   checked on the target before treating it as complete accelerated accounting.
