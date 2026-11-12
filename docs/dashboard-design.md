@@ -54,9 +54,11 @@ retain gap markers; missing values are never converted to zero. Plots span
 the samples actually collected, without claiming a fixed time duration or
 inventing data to fill startup history.
 
-There is no widget editor, drag/resize library, client inventory, live event
+There is no widget editor, drag/resize library, live event
 stream, network scan or traffic classification. Documentation screenshots render
-the actual application with explicitly marked synthetic RPC fixtures. The
+the actual application with explicitly marked synthetic RPC fixtures. A separate
+Overview Devices tab provides passive lease/reservation/neighbour records and
+explicit static-lease staging; it is not part of the Dashboard collector. The
 user-supplied reference image is not redistributed in this repository.
 
 ## Data and resource budget

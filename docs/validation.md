@@ -1,5 +1,25 @@
 # Validation
 
+## Overview Devices, 2026-11-12
+
+Dashboard/app version:0.5.0-r1. Theme version:0.1.8-r1.
+
+- Overview now contains permitted Dashboard and Devices tabs. Existing LuCI
+  status/configuration routes and Dashboard read-only ACLs are preserved.
+- Devices merges DHCPv4/v6, static host sections and passive neighbour snapshots.
+  Unit tests cover MAC/DUID/IAID identity, IP reuse, alternative MACs, missing
+  MACs, unobserved static entries, cached/failed neighbours and lease expiry.
+- Source/pool/MAC/IP conflict validation is tested. Browser fixtures exercise
+  search/filter/pagination, escaped names, read-only users, failed sources,
+  hidden-page polling, modal cancel, duplicate rejection and simulated UCI
+  staging through the existing native pending-changes flow. No auto-apply.
+- Browser-only preview with actual router data and the native LuCI form shows
+  three records, merges its dual-stack client, rejects an out-of-subnet IPv4
+  reservation, and cancels without any UCI write requests. Desktop/tablet/phone
+  layouts were inspected. No live reservation was applied or committed.
+- One bounded third-party source review timed out without a verdict. It is
+  not review approval; primary source/tests/browser checks provide acceptance.
+
 ## Compact collected-sample history, 2026-11-12
 
 Dashboard version: 0.4.4-r1. Theme remains0.1.7-r1.

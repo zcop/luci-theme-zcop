@@ -22,7 +22,7 @@ Application rendered with synthetic test data; these are not live router values.
 | Package | Purpose |
 | --- | --- |
 | `luci-theme-zcop` | Theme, connected sidebar, registered LuCI page menus, three browser-local palettes and mobile navigation. |
-| `luci-app-zcop-dashboard` | Compact overview: device specs, CPU/RAM/disk utilization, WAN activity/state, logical interfaces, physical ports and radio status. |
+| `luci-app-zcop-dashboard` | Dashboard plus Devices: resource/network overview, passive device records and explicit DHCP static-lease staging. |
 
 The theme depends on `luci-theme-bootstrap` to preserve LuCI's established form,
 authentication, modal, save/apply and rollback contracts. No LuCI core patch or
@@ -77,7 +77,7 @@ LuCI or set the media path to `/luci-static/bootstrap`. Authentication and
 save/apply still use LuCI's own handling.
 
 The optional dashboard appears under **Overview → Dashboard**. Overview shows
-only Dashboard when that page is installed and permitted. Other status pages
+Dashboard and Devices when those pages are installed and permitted. Other status pages
 are grouped by their purpose:
 
 | Navigation | Pages |
@@ -109,6 +109,22 @@ maximum frequency are read once per page; unavailable fields are not guessed.
 Detailed configuration stays on the existing pages. Missing data is shown as
 unavailable; an interface being up does not claim Internet reachability, and
 lease counts do not claim that clients are online.
+
+**Overview → Devices** merges DHCPv4/v6 leases, configured static reservations
+and IPv4/v6 neighbour caches. It keeps unobserved static entries and unresolved
+neighbours, groups explicit MAC/DUID identities, and supports search, source
+filters and50-row pages. IP reuse alone does not merge devices. STALE is a
+cached neighbour state, not proof that a device is offline. Records disappear
+when none of these sources retains them; there is no persistent device history.
+
+For writable users, **Set static lease** opens a prefilled IPv4 reservation form.
+It checks local DHCP-served subnets, reserved addresses/MACs and conflicting
+leases, then stages a normal UCI `dhcp` host entry. Review it through LuCI's
+pending changes and use Save & Apply when ready. Nothing applies automatically.
+Existing reservations and advanced DHCPv6 settings use the normal DHCP page.
+Read-only device access is a separate ACL from permission to stage reservations;
+the Dashboard ACL remains read-only. Devices refreshes every30seconds while
+visible, using existing lease/UCI/network APIs and read-only neighbour snapshots.
 
 ## Small-router defaults
 

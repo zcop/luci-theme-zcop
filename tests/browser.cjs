@@ -59,7 +59,7 @@ const server = http.createServer((req, res) => {
    };
    const child = (title, children = {}, more = {}) => ({ title, children, satisfied: true, ...more });
    window.tree = { children: { admin: child('Administration', {
-    status: child('Status', { zcop_dashboard: child('Dashboard'), overview: child('Overview'), routesj:child('Routing'), nftables:child('Firewall'), logs:child('System Log',{syslog:child('System Log'),dmesg:child('Kernel Log')},{action:{type:'alias',path:'admin/status/logs/syslog'}}),processes:child('Processes'),channel_analysis:child('Channel Analysis'),wireguard:child('WireGuard'),realtime:child('Realtime Graphs'),custom_monitor:child('App monitor',{details:child('Monitor details')}),custom_alias:child('App alias',{}, {action:{type:'alias',path:'admin/network/plugin'}}),hidden: child('Denied', {}, { satisfied: false }) }),
+    status: child('Status', { zcop_dashboard: child('Dashboard', {}, {order:0}), overview: child('Overview'), routesj:child('Routing'), nftables:child('Firewall'), logs:child('System Log',{syslog:child('System Log'),dmesg:child('Kernel Log')},{action:{type:'alias',path:'admin/status/logs/syslog'}}),processes:child('Processes'),channel_analysis:child('Channel Analysis'),wireguard:child('WireGuard'),realtime:child('Realtime Graphs'),custom_monitor:child('App monitor',{details:child('Monitor details')}),custom_alias:child('App alias',{}, {action:{type:'alias',path:'admin/network/plugin'}}),hidden: child('Denied', {}, { satisfied: false }) }),
     network: child('Network', { network: child('Interfaces'), wireless: child('Wireless'), diagnostics:child('Diagnostics'), cr881x_yt921x_qos: child('QoS'), plugin: child('Third-party app', { detail: child('Deep settings') }) }),
     system: child('System', { system: child('System') }),
     services: child('Services', { application: child('Installed application') }), logout: child('Log out')
@@ -131,6 +131,13 @@ const server = http.createServer((req, res) => {
   await page.clock.runFor(5000);
   await page.evaluate(() => dashboard.scheduler.refresh());
   assert.deepEqual(await page.locator('#tabmenu a').allTextContents(), ['Dashboard']);
+  await page.evaluate(()=>{tree.children.admin.children.status.children.zcop_devices={title:'Devices',order:1,satisfied:true,children:{}};renderMenu(['admin','status','zcop_devices']);});
+  assert.match(await page.locator('.zcop-navitem.active').innerText(),/Overview$/);
+  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['Dashboard','Devices']);
+  assert.equal(await page.locator('#tabmenu a[aria-current=page]').textContent(),'Devices');
+  await page.evaluate(()=>{tree.children.admin.children.status.children.zcop_devices.satisfied=false;renderMenu(['admin','status','zcop_dashboard']);});
+  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['Dashboard'],'denied Devices entry exposed');
+  await page.evaluate(()=>delete tree.children.admin.children.status.children.zcop_devices);
   assert.equal(await page.locator('.zcop-command .zcop-password-notice').count(),1);
   assert.equal(await page.locator('.zcop-content .zcop-password-notice').count(),0);
   assert.match(await page.locator('.zcop-password-notice').getAttribute('href'),/admin\/system\/admin$/);

@@ -4,5 +4,11 @@
   "order": 0,
   "action": { "type": "view", "path": "zcop/dashboard" },
   "depends": { "acl": [ "luci-app-zcop-dashboard" ] }
+ },
+ "admin/status/zcop_devices": {
+  "title": "Devices",
+  "order": 1,
+  "action": { "type": "view", "path": "zcop/devices" },
+  "depends": { "acl": [ "luci-app-zcop-devices" ] }
  }
 }

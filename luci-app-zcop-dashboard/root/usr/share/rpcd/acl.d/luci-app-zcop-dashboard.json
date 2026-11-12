@@ -19,5 +19,22 @@
     "/sys/kernel/debug/ecm/ecm_nss_ipv6/accelerated_count": [ "read" ]
    }
   }
+ },
+ "luci-app-zcop-devices": {
+  "description": "View known devices and stage DHCP static leases",
+  "read": {
+   "ubus": {
+    "luci-rpc": [ "getDHCPLeases" ],
+    "network.interface": [ "dump" ],
+    "uci": [ "get" ],
+    "file": [ "exec" ]
+   },
+   "uci": [ "dhcp" ],
+   "file": {
+    "/sbin/ip -4 neigh show": [ "exec" ],
+    "/sbin/ip -6 neigh show": [ "exec" ]
+   }
+  },
+  "write": { "uci": [ "dhcp" ] }
  }
 }

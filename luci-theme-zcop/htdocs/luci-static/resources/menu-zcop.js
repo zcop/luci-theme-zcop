@@ -90,12 +90,12 @@ return baseclass.extend({
   const status = groups.find(group => group.name === 'status');
   const pages = status ? this.menuChildren(status) : [];
   if (!pages.some(page => page.name === 'zcop_dashboard')) return groups;
-  const imports = pages.filter(page => !['zcop_dashboard', 'overview', 'realtime'].includes(page.name))
+  const imports = pages.filter(page => !['zcop_dashboard', 'zcop_devices', 'overview', 'realtime'].includes(page.name))
    .map(page => Object.assign({}, page, { zcopPath: [mode, 'status', page.name] }));
   const systemNames = new Set(['logs', 'syslog', 'dmesg', 'processes']);
   const networkNames = new Set(['routes', 'routesj', 'iptables', 'nftables', 'channel_analysis', 'wireguard']);
   groups = groups.map(group => group === status ? Object.assign({}, group, {
-   children: { zcop_dashboard: group.children.zcop_dashboard },
+   children: Object.fromEntries(Object.entries(group.children).filter(([name]) => ['zcop_dashboard', 'zcop_devices'].includes(name))),
    zcopPath: [mode, 'status', 'zcop_dashboard'], zcopChildrenPrefix: [mode, 'status']
   }) : Object.assign({}, group, { children: Object.assign({}, group.children) }));
   const ensureGroup = (name, title, first) => {
