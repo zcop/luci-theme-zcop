@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-theme-zcop
-PKG_VERSION:=0.1.9
+PKG_VERSION:=0.1.10
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 

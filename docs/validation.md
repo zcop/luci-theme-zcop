@@ -1,5 +1,16 @@
 # Validation
 
+## Native page-action contrast, 2026-11-12
+
+Theme version:0.1.10-r1. Dashboard/devices remains0.5.0-r1.
+
+- The native secondary Save action keeps readable text on its neutral surface,
+  overriding Bootstrap's adjacent-Apply-button rules. Split Save & Apply
+  previews inherit the button surface instead of adding an inset panel.
+- This completes the control-styling pass; values, handlers and configuration
+  behavior are unchanged. System action colours are checked explicitly in the
+  live browser alongside all-palette inputs, opened pickers and modal actions.
+
 ## Consistent form controls, 2026-11-12
 
 Theme version:0.1.9-r1. Dashboard/devices remains0.5.0-r1.

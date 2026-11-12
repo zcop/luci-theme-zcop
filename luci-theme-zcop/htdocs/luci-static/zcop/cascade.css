@@ -74,6 +74,8 @@ a.zcop-password-notice:hover>span{text-decoration:underline}
 .zcop-theme :is(.btn,.cbi-button,button:not(:where(.zcop-menu-toggle,[data-zcop-palette])),input:where([type=button],[type=submit],[type=reset])):not(.spinning){background-image:none}
 .zcop-theme :is(.cbi-button-positive,.cbi-button-apply,.cbi-button-save,.cbi-button-action){background-color:var(--zc-accent);border-color:var(--zc-accent);color:var(--zc-surface)}
 .zcop-theme :is(.cbi-button-negative,.cbi-button-remove){color:var(--zc-danger)}
+.zcop-theme .cbi-page-actions .cbi-button-save{background-color:var(--zc-inset);border-color:var(--zc-line);color:var(--zc-text)}
+.zcop-theme .cbi-dropdown:is(.btn,.cbi-button)>ul:not(.dropdown){background:transparent;color:inherit}
 .zcop-theme :is(.btn,.cbi-button,button:not(.zcop-menu-toggle):not([data-zcop-palette])):hover:not(:disabled){border-color:var(--zc-accent)!important;box-shadow:none;filter:brightness(.97)}
 .zcop-theme :is(input,textarea,select,.cbi-select,.cbi-dropdown):focus,.zcop-theme .cbi-dropdown[open]{border-color:var(--zc-accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--zc-accent) 18%,transparent);outline:0}
 .zcop-theme :is(.btn,.cbi-button,button):focus-visible{outline:2px solid var(--zc-accent);outline-offset:2px;box-shadow:none}
