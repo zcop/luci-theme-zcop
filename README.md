@@ -29,6 +29,12 @@ authentication, modal, save/apply and rollback contracts. No LuCI core patch or
 ImmortalWrt fork is needed. Current templates target modern ucode-based LuCI;
 legacy Lua-only LuCI is not supported.
 
+Form controls and opened LuCI dropdowns follow the selected palette, including
+search fields, focus/error states and compact footer buttons. Supported desktop
+browsers also use themed native select pickers; other browsers retain their
+native picker behaviour. This styling adds no JavaScript widget replacement,
+router service or polling.
+
 ## Add the feed
 
 Add this line once to the firmware tree's `feeds.conf.default` (or its active

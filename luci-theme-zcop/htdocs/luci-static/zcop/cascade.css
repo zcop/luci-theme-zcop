@@ -57,3 +57,52 @@ a.zcop-password-notice:hover>span{text-decoration:underline}
 .zcop-theme[data-page="admin-status-zcop_dashboard"] .zc-dashboard-grid{border-top:0}
 @media(min-width:1650px){.zcop-layout{height:calc(100vh - 64px);height:calc(100dvh - 64px);min-height:0}}
 @media(max-width:720px){.zcop-layout{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0}.zcop-main{height:auto;flex:1;min-height:0}.zcop-sidebar{flex:0 1 auto;min-height:0;max-height:45vh;max-height:45dvh}.zcop-menu-open .zcop-sidebar{padding:8px 0 16px}.zcop-brand{padding-bottom:16px}.zcop-sidebar-bottom{display:flex;align-items:center;gap:12px;padding-top:12px}.zcop-logout{margin:0}.zcop-content{scrollbar-gutter:auto}}
+
+/* Give Bootstrap widgets the same palette as the shell, including their
+ * generated dropdown panels, dynamic-list items and check/radio controls. */
+.zcop-theme{--background-color-high:var(--zc-surface);--background-color-low:var(--zc-inset);--text-color-high:var(--zc-text);--text-color-medium:var(--zc-muted);--border-color-high:var(--zc-line);--border-color-low:var(--zc-line);--primary-color-high:var(--zc-accent);--primary-color-medium:var(--zc-soft);--primary-color-low:var(--zc-soft);--on-primary-color:var(--zc-text);--error-color-high:var(--zc-danger);--error-color-medium:var(--zc-danger);--zc-control-size:34px;--zc-control-y:6px;--zc-control-x:10px}
+.zcop-theme :is(input:not([type]),input[type=text],input[type=search],input[type=password],input[type=number],input[type=email],input[type=url],input[type=tel],input[type=date],input[type=time],input[type=datetime-local],textarea,select,.cbi-select){
+ appearance:none;-webkit-appearance:none;background-color:var(--zc-surface);color:var(--zc-text);border:1px solid var(--zc-line);border-radius:7px;box-shadow:none;min-height:var(--zc-control-size);height:auto;max-width:100%;padding:var(--zc-control-y) var(--zc-control-x);line-height:1.4
+}
+.zcop-theme :is(input,textarea)::placeholder{color:var(--zc-muted);opacity:1}
+.zcop-theme select:not([multiple]):not([size]){padding-inline-end:30px;background-image:linear-gradient(45deg,transparent 50%,var(--zc-muted) 50%),linear-gradient(135deg,var(--zc-muted) 50%,transparent 50%);background-position:calc(100% - 15px) center,calc(100% - 11px) center;background-size:4px 4px;background-repeat:no-repeat}
+.zcop-theme select:is([multiple],[size]){background-image:none}
+.zcop-theme select option{background:var(--zc-surface);color:var(--zc-text)}
+.zcop-theme :is(.btn,.cbi-button,button:not(:where(.zcop-menu-toggle,[data-zcop-palette])),input:where([type=button],[type=submit],[type=reset])){
+ appearance:none;-webkit-appearance:none;min-height:var(--zc-control-size);height:auto;max-width:100%;padding:var(--zc-control-y) 12px;line-height:1.35;border:1px solid var(--zc-line);border-radius:7px;background-color:var(--zc-inset);color:var(--zc-text);box-shadow:none;text-shadow:none;cursor:pointer
+}
+.zcop-theme :is(.btn,.cbi-button,button:not(:where(.zcop-menu-toggle,[data-zcop-palette])),input:where([type=button],[type=submit],[type=reset])):not(.spinning){background-image:none}
+.zcop-theme :is(.cbi-button-positive,.cbi-button-apply,.cbi-button-save,.cbi-button-action){background-color:var(--zc-accent);border-color:var(--zc-accent);color:var(--zc-surface)}
+.zcop-theme :is(.cbi-button-negative,.cbi-button-remove){color:var(--zc-danger)}
+.zcop-theme :is(.btn,.cbi-button,button:not(.zcop-menu-toggle):not([data-zcop-palette])):hover:not(:disabled){border-color:var(--zc-accent)!important;box-shadow:none;filter:brightness(.97)}
+.zcop-theme :is(input,textarea,select,.cbi-select,.cbi-dropdown):focus,.zcop-theme .cbi-dropdown[open]{border-color:var(--zc-accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--zc-accent) 18%,transparent);outline:0}
+.zcop-theme :is(.btn,.cbi-button,button):focus-visible{outline:2px solid var(--zc-accent);outline-offset:2px;box-shadow:none}
+.zcop-theme input:is([type=checkbox],[type=radio]):focus-visible::before{border-color:var(--zc-accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--zc-accent) 18%,transparent)}
+.zcop-theme input:is([type=checkbox],[type=radio]).cbi-input-invalid:focus-visible::before{border-color:var(--zc-danger)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--zc-danger) 18%,transparent)}
+.zcop-theme :is(input,select,textarea,button,.btn,.cbi-button):disabled{opacity:.5;cursor:default}
+.zcop-theme :is(input,textarea)[readonly]{background-color:var(--zc-inset);border-color:var(--zc-line);color:var(--zc-muted)}
+.zcop-theme .cbi-dropdown:not(.btn):not(.cbi-button){min-height:var(--zc-control-size);border:1px solid var(--zc-line);border-radius:7px;background-color:var(--zc-surface);color:var(--zc-text);box-shadow:none;align-items:center}
+.zcop-theme .cbi-dropdown:not(.btn):not(.cbi-button):not(.spinning){background-image:none}
+.zcop-theme .cbi-dropdown:not(.btn):not(.cbi-button)>ul>li{padding:6px 10px;color:var(--zc-text)}
+.zcop-theme .cbi-dropdown>.open{padding-inline:10px;color:var(--zc-muted)}
+.zcop-theme .cbi-dropdown[open]>ul.dropdown{background:var(--zc-surface);border:1px solid var(--zc-line);border-radius:7px;padding:4px;box-shadow:0 8px 24px #0002}
+.zcop-theme .cbi-dropdown[open]>ul.dropdown>li{color:var(--zc-text);border-color:var(--zc-line);border-radius:4px}
+.zcop-theme .cbi-dropdown[open]>ul.dropdown>li:is([selected],.focus,:hover){background:var(--zc-soft);color:var(--zc-text)}
+.zcop-theme .cbi-dynlist>.item{background:var(--zc-inset);border:1px solid var(--zc-line);border-radius:6px;color:var(--zc-text);box-shadow:none}
+.zcop-theme :is(input,textarea,select,.cbi-select,.cbi-dropdown).cbi-input-invalid,.zcop-theme .cbi-value-error :is(input,textarea,select,.cbi-dropdown){border-color:var(--zc-danger)!important;color:var(--zc-danger)}
+.zcop-theme :is(input,textarea,select,.cbi-select,.cbi-dropdown).cbi-input-invalid:focus{box-shadow:0 0 0 2px color-mix(in srgb,var(--zc-danger) 18%,transparent)}
+.zcop-theme :is(button,.btn,.cbi-button,input[type=button],input[type=submit]).spinning{padding-inline-start:34px;background-position:10px center}
+.zcop-theme input[type=file]::file-selector-button{font:inherit;padding:6px 10px;margin-inline-end:8px;background:var(--zc-inset);color:var(--zc-text);border:1px solid var(--zc-line);border-radius:6px}
+.zcop-footer{--zc-control-size:28px;--zc-control-y:4px;--zc-control-x:8px}
+
+/* Enhance native desktop selects without replacing their value/events or
+ * keyboard behavior. Unsupported browsers keep the ordinary native picker. */
+@supports (appearance:base-select){
+ @media (pointer:fine){
+  .zcop-theme select:not([multiple]):not([size]),.zcop-theme select:not([multiple]):not([size])::picker(select){appearance:base-select}
+  .zcop-theme select::picker-icon{display:none}
+  .zcop-theme select::picker(select){background:var(--zc-surface);color:var(--zc-text);border:1px solid var(--zc-line);border-radius:7px;padding:4px;box-shadow:0 8px 24px #0002;max-height:50vh;overflow:auto}
+  .zcop-theme select option{padding:7px 10px;border-radius:4px;gap:8px}
+  .zcop-theme select option:is(:hover,:focus,:checked){background:var(--zc-soft);color:var(--zc-text)}
+ }
+}

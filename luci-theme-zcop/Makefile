@@ -1,13 +1,15 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-theme-zcop
-PKG_VERSION:=0.1.8
+PKG_VERSION:=0.1.9
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 
 LUCI_TITLE:=Zcop LuCI theme with connected navigation
 LUCI_DEPENDS:=+luci-theme-bootstrap
 LUCI_MINIFY_UT:=0
+# Preserve modern selector and @supports/picker syntax.
+LUCI_MINIFY_CSS:=0
 
 define Package/luci-theme-zcop/postrm
 #!/bin/sh

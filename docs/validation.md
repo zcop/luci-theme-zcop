@@ -1,5 +1,24 @@
 # Validation
 
+## Consistent form controls, 2026-11-12
+
+Theme version:0.1.9-r1. Dashboard/devices remains0.5.0-r1.
+
+- Text/search/password/numeric fields, textareas, selects and buttons now share
+  palette colours, borders, spacing and focus states. Footer controls stay
+  compact. Bootstrap dropdown panels/dynamic lists use the same palette;
+  selected, disabled, read-only, invalid and spinner styles remain distinct.
+- Supported desktop browsers use CSS customizable native select pickers, gated
+  by @supports and pointer:fine. Other browsers/devices retain native pickers.
+  Existing select values/events, multi-selects and LuCI widget code are intact.
+  Theme CSS minification is disabled to preserve modern selector/picker syntax.
+- Existing unit/device-model and both browser suites pass. A browser-only live
+  CSS preview checks all three palettes, native picker opening/selection/escape,
+  search focus and the native static-lease modal. It also opens the real LuCI
+  network dropdown through unsaved System form controls. Desktop/tablet/phone
+  checks report no document overflow or page errors and no UCI write requests.
+- Reference: [MDN customizable selects](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select).
+
 ## Overview Devices, 2026-11-12
 
 Dashboard/app version:0.5.0-r1. Theme version:0.1.8-r1.
