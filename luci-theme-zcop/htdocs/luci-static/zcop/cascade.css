@@ -52,5 +52,8 @@ a.zcop-password-notice:hover>span{text-decoration:underline}
 @media(max-width:720px){.zcop-password-notice{font-size:11px;max-width:130px;gap:5px}}
 .zcop-content{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:4px;margin:-4px}
 .zcop-main>.alert-message{flex-shrink:0;max-height:25%;overflow:auto}
+/* Dashboard panes meet the command-bar divider; there is no page-heading row. */
+.zcop-theme[data-page="admin-status-zcop_dashboard"] .zcop-command{margin-bottom:0}
+.zcop-theme[data-page="admin-status-zcop_dashboard"] .zc-dashboard-grid{border-top:0}
 @media(min-width:1650px){.zcop-layout{height:calc(100vh - 64px);height:calc(100dvh - 64px);min-height:0}}
 @media(max-width:720px){.zcop-layout{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0}.zcop-main{height:auto;flex:1;min-height:0}.zcop-sidebar{flex:0 1 auto;min-height:0;max-height:45vh;max-height:45dvh}.zcop-menu-open .zcop-sidebar{padding:8px 0 16px}.zcop-brand{padding-bottom:16px}.zcop-sidebar-bottom{display:flex;align-items:center;gap:12px;padding-top:12px}.zcop-logout{margin:0}.zcop-content{scrollbar-gutter:auto}}

@@ -1,5 +1,15 @@
 # Validation
 
+## Dashboard heading gap, 2026-11-12
+
+Theme version: 0.1.7-r1. Dashboard remains0.4.2-r1.
+
+- Removed the Dashboard-only 24px desktop / 20px phone gap below the command
+  bar and the duplicate top divider. Dashboard panes now meet the existing
+  command-bar divider. Other pages keep their normal content spacing.
+- Browser-only verification on the router measured zero gap at1536,768,390px.
+  Existing unit and browser checks pass; data collection is unchanged.
+
 ## Selected tabs after indicator resize, 2026-11-12
 
 Theme version: 0.1.6-r1. Dashboard remains0.4.2-r1.
