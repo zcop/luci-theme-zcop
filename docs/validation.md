@@ -1,5 +1,31 @@
 # Validation
 
+## Status-page redistribution, 2026-11-12
+
+Theme version: 0.1.5-r1. Dashboard remains0.4.2-r1.
+
+- System now includes Logs and Processes. Network Diagnostics includes existing
+  connectivity tools plus routing, firewall, channel-analysis and WireGuard
+  status pages when permitted. Other status plugins use System Diagnostics.
+  Legacy Overview and Realtime Graphs are hidden, with their routes retained.
+- Active groups/tabs match original backend paths, including nested imported
+  pages. Canonical application pages take precedence over aliases to those pages.
+- LuCI's real menu helper resolves aliases to target children and caches node
+  names. The presentation preserves an alias's own permitted children (including
+  System/Kernel logs), or uses the target's canonical child URLs. Source routes,
+  actions and ACL flags are not modified by the redistribution.
+- Unit and actual-module browser checks cover relocated pages, native/deep apps,
+  aliases, unknown plugins, denied entries, status-only users without original
+  System/Network configuration groups, Dashboard fallback, and selected-tab
+  visibility on mobile. Existing metric/layout/paused-polling checks also pass.
+- Browser-only candidate verification against the live router passed for
+  Dashboard, System, Logs, Processes, routing, firewall, WireGuard status and
+  Connectivity, with correct grouping/selection and no browser exceptions.
+  Channel-analysis links were checked without opening their scan view.
+- A bounded third-party source review timed out without a verdict and is not
+  review approval. Acceptance uses primary source, fixture and device checks.
+
+
 ## Wider interface list and compact activity, 2026-11-12
 
 Dashboard version: 0.4.2-r1. Theme remains0.1.4-r1.

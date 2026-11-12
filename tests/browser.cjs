@@ -59,12 +59,23 @@ const server = http.createServer((req, res) => {
    };
    const child = (title, children = {}, more = {}) => ({ title, children, satisfied: true, ...more });
    window.tree = { children: { admin: child('Administration', {
-    status: child('Status', { zcop_dashboard: child('Dashboard'), overview: child('Overview'), hidden: child('Denied', {}, { satisfied: false }) }),
-    network: child('Network', { network: child('Interfaces'), wireless: child('Wireless'), cr881x_yt921x_qos: child('QoS'), plugin: child('Third-party app', { detail: child('Deep settings') }) }),
+    status: child('Status', { zcop_dashboard: child('Dashboard'), overview: child('Overview'), routesj:child('Routing'), nftables:child('Firewall'), logs:child('System Log',{syslog:child('System Log'),dmesg:child('Kernel Log')},{action:{type:'alias',path:'admin/status/logs/syslog'}}),processes:child('Processes'),channel_analysis:child('Channel Analysis'),wireguard:child('WireGuard'),realtime:child('Realtime Graphs'),custom_monitor:child('App monitor',{details:child('Monitor details')}),custom_alias:child('App alias',{}, {action:{type:'alias',path:'admin/network/plugin'}}),hidden: child('Denied', {}, { satisfied: false }) }),
+    network: child('Network', { network: child('Interfaces'), wireless: child('Wireless'), diagnostics:child('Diagnostics'), cr881x_yt921x_qos: child('QoS'), plugin: child('Third-party app', { detail: child('Deep settings') }) }),
     system: child('System', { system: child('System') }),
     services: child('Services', { application: child('Installed application') }), logout: child('Log out')
    }) } };
-   window.ui = { menu: { load: async () => tree, getChildren: node => Object.entries(node.children || {}).filter(([, n]) => n.satisfied && n.title).map(([name, n]) => ({ ...n, name })) } };
+   for(const [name,order]of Object.entries({status:10,system:20,network:50,services:60,logout:999}))tree.children.admin.children[name].order=order;
+   window.originalMenuJSON=JSON.stringify(tree,(key,value)=>key==='name'?undefined:value);
+   window.renderMenu=path=>{L.env.dispatchpath=path;document.querySelector('#topmenu').replaceChildren();document.querySelector('#tabmenu').replaceChildren();menu.render(tree);};
+   window.ui = { menu: { load: async () => tree, getChildren: node => Object.entries(node.children || {}).filter(([,n])=>n.satisfied && Object.hasOwn(n,'title')).map(([name,n])=>{
+    n.name=name;
+    if(n.action?.path&&['alias','rewrite'].includes(n.action.type)){
+     let target=tree;for(const part of n.action.path.split('/'))target=target?.children?.[part];
+     if(target)return {...n,children:target.children,action:target.action};
+    }
+    return n;
+   }).sort((a,b)=>(a.order??1000)-(b.order??1000)||a.name.localeCompare(b.name)) } };
+
    window.L = { env: { dispatchpath: ['admin', 'status', 'zcop_dashboard'] }, url: (...args) => '/cgi-bin/luci/' + args.join('/'), resource: p => '/luci-static/resources/' + p, resolveDefault: (p, fallback) => p.catch(() => fallback) };
    class Base { constructor() { if (this.__init__) this.__init__(); } }
    Base.extend = properties => { class Module extends Base {} Object.assign(Module.prototype, properties); return Module; };
@@ -176,6 +187,46 @@ const server = http.createServer((req, res) => {
   assert.equal(await page.locator('#tabmenu').getByRole('link',{name:'Dashboard',exact:true}).count(),0,'denied dashboard exposed');
   assert.equal(await page.locator('#tabmenu').getByRole('link',{name:'System details',exact:true}).count(),1,'original permitted menu fallback lost');
   await page.evaluate(() => {tree.children.admin.children.status.children.zcop_dashboard.satisfied=true;document.querySelector('#topmenu').replaceChildren();document.querySelector('#tabmenu').replaceChildren();menu.render(tree);});
+  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['Dashboard']);
+  await page.evaluate(()=>renderMenu(['admin','status','logs','dmesg']));
+  assert.equal(await page.locator('.zcop-navitem.active').getAttribute('href'),'/cgi-bin/luci/admin/system');
+  assert.equal(await page.locator('#tabmenu a[aria-current="page"]').allTextContents().then(a=>a.join(',')),'Logs,Kernel Log');
+  assert.match(await page.getByRole('link',{name:'Kernel Log',exact:true}).getAttribute('href'),/admin\/status\/logs\/dmesg$/);
+  assert.equal(await page.getByRole('link',{name:'Realtime Graphs',exact:true}).count(),0);
+  assert.equal(await page.getByRole('link',{name:'System details',exact:true}).count(),0);
+  await page.evaluate(()=>renderMenu(['admin','status','processes']));
+  assert.match(await page.locator('.zcop-navitem.active').innerText(),/System$/);
+  assert.equal(await page.locator('#tabmenu a[aria-current="page"]').innerText(),'Processes');
+  for(const [name,title]of [['routesj','Routing table'],['nftables','Firewall status'],['channel_analysis','Channel analysis'],['wireguard','WireGuard status']]){
+   await page.evaluate(name=>renderMenu(['admin','status',name]),name);
+   assert.match(await page.locator('.zcop-navitem.active').innerText(),/Network$/);
+   assert.deepEqual(await page.locator('#tabmenu a[aria-current="page"]').allTextContents(),['Diagnostics',title]);
+   assert.equal(await page.getByRole('link',{name:title,exact:true}).getAttribute('href'),'/cgi-bin/luci/admin/status/'+name);
+  }
+  await page.evaluate(()=>renderMenu(['admin','network','diagnostics']));
+  assert.deepEqual(await page.locator('#tabmenu a[aria-current="page"]').allTextContents(),['Diagnostics','Connectivity']);
+  assert.equal(await page.getByRole('link',{name:'Connectivity',exact:true}).getAttribute('href'),'/cgi-bin/luci/admin/network/diagnostics');
+  await page.evaluate(()=>renderMenu(['admin','status','custom_monitor','details']));
+  assert.match(await page.locator('.zcop-navitem.active').innerText(),/System$/);
+  assert.deepEqual(await page.locator('#tabmenu a[aria-current="page"]').allTextContents(),['Diagnostics','App monitor','Monitor details']);
+  assert.equal(await page.getByRole('link',{name:'Monitor details',exact:true}).getAttribute('href'),'/cgi-bin/luci/admin/status/custom_monitor/details');
+  await page.evaluate(()=>renderMenu(['admin','status','custom_alias']));
+  assert.match(await page.locator('.zcop-navitem.active').innerText(),/System$/);
+  assert.equal(await page.getByRole('link',{name:'Deep settings',exact:true}).getAttribute('href'),'/cgi-bin/luci/admin/network/plugin/detail','alias subpage invented a backend route');
+  await page.evaluate(()=>{tree.children.admin.children.status.children.nftables.satisfied=false;renderMenu(['admin','network','diagnostics']);});
+  assert.equal(await page.getByRole('link',{name:'Firewall status',exact:true}).count(),0,'denied status entry reappeared');
+  await page.evaluate(()=>{tree.children.admin.children.status.children.nftables.satisfied=true;window.savedMenu=tree;tree=JSON.parse(JSON.stringify(tree));delete tree.children.admin.children.system;delete tree.children.admin.children.network;renderMenu(['admin','status','logs','syslog']);});
+  assert.equal(await page.getByRole('link',{name:'System',exact:true}).getAttribute('href'),'/cgi-bin/luci/admin/status/logs');
+  assert.equal(await page.getByRole('link',{name:'Network',exact:true}).getAttribute('href'),'/cgi-bin/luci/admin/status/routesj');
+  assert.equal(await page.getByRole('link',{name:'Connectivity',exact:true}).count(),0,'configuration-only entry invented for read-only user');
+  await page.evaluate(()=>{tree=savedMenu;renderMenu(['admin','status','zcop_dashboard']);});
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>renderMenu(['admin','status','logs','dmesg']));
+  assert.ok(await page.locator('#tabmenu a[aria-current="page"]').evaluateAll(links=>links.every(link=>{const a=link.getBoundingClientRect(),b=link.closest('ul').getBoundingClientRect();return a.right<=b.right+1&&a.left>=b.left-1;})),'relocated selected tab is outside mobile menu');
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.setViewportSize({width:1440,height:940});
+  await page.evaluate(()=>renderMenu(['admin','status','zcop_dashboard']));
+  assert.equal(await page.evaluate(()=>JSON.stringify(tree,(key,value)=>key==='name'?undefined:value)),await page.evaluate(()=>originalMenuJSON),'menu presentation mutated registered ACL data');
   assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['Dashboard']);
   const beforeHidden = await page.evaluate(() => { fixture.hidden = true; document.dispatchEvent(new Event('visibilitychange')); return fixture.calls.length; });
   await page.clock.runFor(60000);

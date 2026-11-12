@@ -77,11 +77,21 @@ LuCI or set the media path to `/luci-static/bootstrap`. Authentication and
 save/apply still use LuCI's own handling.
 
 The optional dashboard appears under **Overview → Dashboard**. Overview shows
-only Dashboard when that page is installed and permitted. Other status routes
-stay registered at their original URLs; the original status menu is the fallback
-when Dashboard is unavailable or not permitted. Other LuCI sections retain
-their installed applications and deeper subpages. No application URL or UCI
-configuration workflow is rewritten.
+only Dashboard when that page is installed and permitted. Other status pages
+are grouped by their purpose:
+
+| Navigation | Pages |
+| --- | --- |
+| System | Logs (System/Kernel subpages when registered), Processes |
+| Network → Diagnostics | Connectivity tools, Routing table, Firewall status, Channel analysis, WireGuard status when installed/permitted |
+| System → Diagnostics | Other installed status plugins, preserving their subpages |
+| Hidden for now | Legacy Overview, Realtime Graphs |
+
+All links use existing backend URLs and access checks. Hidden pages remain
+registered; no core route or package is removed. Native application subpages,
+status aliases and QoS grouping stay accessible. When Dashboard is unavailable
+or not permitted, the original status menu remains the fallback. Diagnostic
+views are loaded only when opened; menu rendering does not run probes or scans.
 
 When the existing root-password check reports no password, a compact **No
 password set** notice appears in the fixed top bar, with a link to password
