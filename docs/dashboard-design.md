@@ -45,8 +45,10 @@ unavailable, and their annotation rows retain two lines of space, so polling
 does not move neighboring sections.
 
 CPU/RAM plots use existing15-second snapshots, without any additional request.
-Each browser-local array is limited to60 numeric samples/gap markers. A single
-sample is a point; missing values and resets break the plotted line. Plots span
+Each browser-local array is limited to60 numeric samples/gap markers. CPU/RAM
+plots use a fixed0-100% scale with labeled0/50/100% guides and a subtle area
+fill. A single sample is a point; missing values and resets break both the
+plotted line and its fill. Plots span
 the samples actually collected, without claiming a fixed time duration or
 inventing data to fill startup history.
 

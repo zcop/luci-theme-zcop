@@ -1,5 +1,19 @@
 # Validation
 
+## Filled resource history, 2026-11-12
+
+Dashboard version: 0.4.3-r1. Theme remains0.1.7-r1.
+
+- CPU and RAM histories have a subtle accent fill under the line, with fixed
+  0/50/100% guides and labels. The existing52px plot slots and panel heights
+  are retained. Single samples remain points; missing history leaves gaps in
+  both the stroke and fill. Empty history is not drawn as zero usage.
+- Unit and actual-module browser checks pass. Browser geometry verifies fill
+  on both sides of a missing sample, no fill across that gap, and correct50%
+  placement on the fixed scale. Light/dark previews were visually inspected;
+  the suite also covers the luxury palette and narrow frames.
+- Existing RPCs, polling intervals and browser history limits are unchanged.
+
 ## Dashboard heading gap, 2026-11-12
 
 Theme version: 0.1.7-r1. Dashboard remains0.4.2-r1.

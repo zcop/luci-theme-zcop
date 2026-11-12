@@ -290,21 +290,33 @@ return view.extend({
   const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', '0 0 160 48'); svg.setAttribute('class', 'zc-sparkline');
   svg.setAttribute('preserveAspectRatio', 'none');
-  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label);
-  let connected = false, last = null;
-  const points = samples.map((value, i) => {
-   if (!Number.isFinite(value)) { connected = false; return ''; }
+  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label + ' (0–100%)');
+  const segments = []; let segment = [];
+  samples.forEach((value, i) => {
+   if (!Number.isFinite(value)) {
+    if (segment.length) segments.push(segment);
+    segment = []; return;
+   }
    const x = samples.length > 1 ? i * 160 / (samples.length - 1) : 160, y = 45 - Math.max(0, Math.min(100, value)) * .42;
-   last = {x,y};
-   const point = (connected ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
-   connected = true; return point;
-  }).join(' ');
-  const path = document.createElementNS(ns, 'path'); path.setAttribute('d', points); svg.append(path);
+   segment.push({x,y});
+  });
+  if (segment.length) segments.push(segment);
+  const point = p => p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+  const grid = document.createElementNS(ns, 'path');
+  grid.setAttribute('class', 'zc-spark-grid'); grid.setAttribute('d', 'M0 3 H160 M0 24 H160 M0 45 H160'); svg.append(grid);
+  const area = document.createElementNS(ns, 'path'); area.setAttribute('class', 'zc-spark-area');
+  area.setAttribute('d', segments.filter(s => s.length > 1).map(s =>
+   'M' + s[0].x.toFixed(1) + ' 45 L' + s.map(point).join(' L') + ' L' + s[s.length - 1].x.toFixed(1) + ' 45 Z').join(' '));
+  svg.append(area);
+  const path = document.createElementNS(ns, 'path'); path.setAttribute('class', 'zc-spark-line');
+  path.setAttribute('d', segments.map(s => s.map((p, i) => (i ? 'L' : 'M') + point(p)).join(' ')).join(' ')); svg.append(path);
+  const last = segments[segments.length - 1]?.slice(-1)[0];
   if (last) {
    const dot = document.createElementNS(ns, 'circle');
    dot.setAttribute('cx', last.x); dot.setAttribute('cy', last.y); dot.setAttribute('r', '1.4'); svg.append(dot);
   }
-  return svg;
+  return E('div', { 'class': 'zc-util-chart' }, [svg,
+   E('div', { 'class': 'zc-util-scale', 'aria-hidden': 'true' }, ['100%', '50%', '0%'].map(value => E('span', {}, value)))]);
  },
  chart() {
   const ns = 'http://www.w3.org/2000/svg';

@@ -57,8 +57,12 @@
 .zc-network-footer .zc-datum{font-size:11px;gap:6px}.zc-network-footer .zc-note{margin:0}
 .zc-cpu,.zc-memory{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:baseline}
 .zc-cpu h3,.zc-memory h3{margin:0!important}.zc-util-value{font-size:20px;line-height:1.3;font-weight:550;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.zc-sparkline{grid-column:1/-1;display:block;width:100%;height:48px;overflow:hidden;border-bottom:1px solid var(--zc-line);margin:2px 0}
-.zc-sparkline path{fill:none;stroke:var(--zc-accent);stroke-width:1;vector-effect:non-scaling-stroke}.zc-sparkline circle{fill:var(--zc-accent)}
+.zc-util-chart{display:grid;grid-template-columns:minmax(0,1fr) 26px;gap:8px;height:52px}
+.zc-sparkline{display:block;width:100%;height:48px;overflow:hidden;margin:2px 0}
+.zc-spark-line{fill:none;stroke:var(--zc-accent);stroke-width:1;vector-effect:non-scaling-stroke}.zc-sparkline circle{fill:var(--zc-accent)}
+.zc-spark-area{fill:var(--zc-accent);fill-opacity:.18;stroke:none}
+.zc-spark-grid{fill:none;stroke:var(--zc-line);stroke-width:1;stroke-dasharray:2 3;vector-effect:non-scaling-stroke}
+.zc-util-scale{display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;font-size:9px;line-height:1;color:var(--zc-muted);font-variant-numeric:tabular-nums}
 .zc-trend-slot{grid-column:1/-1;height:52px}
 .zc-cpu>.zc-note,.zc-memory>.zc-note{grid-column:1/-1;margin:0;min-height:3em}
 .zc-network-footer{padding:10px 20px}

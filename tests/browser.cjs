@@ -155,6 +155,19 @@ const server = http.createServer((req, res) => {
   assert.equal((await page.locator('.zc-memory').boundingBox()).height,pendingRAM.height,'RAM section resized after polling');
   assert.ok(await page.evaluate(() => dashboard.cpuHistory.length <= 60 && dashboard.ramHistory.length <= 60), 'resource histories are not bounded');
   assert.equal(await page.locator('.zc-sparkline').count(), 2);
+  assert.deepEqual(await page.locator('.zc-util-scale').allTextContents(), ['100%50%0%', '100%50%0%']);
+  assert.deepEqual(await page.evaluate(() => {
+   const charts = [];
+   const area = values => {
+    const chart = dashboard.sparkline(values, 'Fixture'); charts.push(chart);
+    document.querySelector('#view').append(chart); return chart.querySelector('.zc-spark-area');
+   };
+   const gap = area([100,100,null,100,100]), middle = area([50,50]);
+   const result = [gap.isPointInFill(new DOMPoint(20,25)), gap.isPointInFill(new DOMPoint(80,25)),
+    gap.isPointInFill(new DOMPoint(140,25)), middle.isPointInFill(new DOMPoint(80,30)),
+    middle.isPointInFill(new DOMPoint(80,15)), area([35]).getAttribute('d'), area([]).getAttribute('d')];
+   charts.forEach(chart => chart.remove()); return result;
+  }), [true,false,true,true,false,'',''], 'resource fill bridges missing history or changes the fixed percentage scale');
   const historyBefore = await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]);
   await page.evaluate(() => {dashboard.draw();dashboard.draw();});
   assert.deepEqual(await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]),historyBefore,'redrawing duplicates resource samples');
