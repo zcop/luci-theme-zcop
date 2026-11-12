@@ -13,7 +13,7 @@ fs.mkdirSync(output, { recursive: true });
 const bootstrap = process.env.LUCI_BOOTSTRAP_CSS;
 if (!bootstrap) throw Error('Set LUCI_BOOTSTRAP_CSS to an installed/bootstrap source cascade.css');
 
-const fixture = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/luci-static/zcop/cascade.css"><script src="/luci-static/zcop/palette.js"></script></head><body class="zcop-theme"><div class="zcop-layout"><aside id="mainmenu" class="zcop-sidebar"><a class="zcop-brand" href="/"><img src="/luci-static/zcop/logo.svg" width="30" height="30" alt=""><span>CR881x<small>Router control</small></span></a><nav id="topmenu"></nav><div class="zcop-sidebar-bottom"><div class="zcop-palettes"><button data-zcop-palette="light">Light</button><button data-zcop-palette="dark">Dark</button><button data-zcop-palette="luxury">Luxury</button></div></div></aside><main id="maincontent" class="zcop-main"><div class="zcop-command"><button class="zcop-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button><nav id="tabmenu"></nav><div id="indicators"></div></div><div class="zcop-content"><div id="view"></div><footer class="zcop-footer"><span>Synthetic RPC fixture · no router connection</span><span>Zcop theme</span></footer></div></main></div></body></html>`;
+const fixture = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/luci-static/zcop/cascade.css"><script src="/luci-static/zcop/palette.js"></script></head><body class="zcop-theme"><div class="zcop-layout"><aside id="mainmenu" class="zcop-sidebar"><a class="zcop-brand" href="/"><img src="/luci-static/zcop/logo.svg" width="30" height="30" alt=""><span>CR881x<small>Router control</small></span></a><nav id="topmenu"></nav><div class="zcop-sidebar-bottom"><div class="zcop-palettes"><button data-zcop-palette="light">Light</button><button data-zcop-palette="dark">Dark</button><button data-zcop-palette="luxury">Luxury</button></div></div></aside><main id="maincontent" class="zcop-main"><div class="zcop-command"><button class="zcop-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button><nav id="tabmenu"></nav><a class="zcop-password-notice" href="/cgi-bin/luci/admin/system/admin"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M7 1 13 12H1Z"/><path d="M7 4v4m0 2v.1"/></svg><span>No password set</span></a><div id="indicators"><span>Refreshing</span></div></div><div class="zcop-content"><div id="view"></div><footer class="zcop-footer"><span>Synthetic RPC fixture · no router connection</span><span>Zcop theme</span></footer></div></main></div></body></html>`;
 
 const server = http.createServer((req, res) => {
  const pathname = new URL(req.url, 'http://localhost').pathname;
@@ -111,6 +111,11 @@ const server = http.createServer((req, res) => {
   await page.evaluate(() => dashboard.scheduler.refresh());
   await page.clock.runFor(5000);
   await page.evaluate(() => dashboard.scheduler.refresh());
+  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(), ['Dashboard']);
+  assert.equal(await page.locator('.zcop-command .zcop-password-notice').count(),1);
+  assert.equal(await page.locator('.zcop-content .zcop-password-notice').count(),0);
+  assert.match(await page.locator('.zcop-password-notice').getAttribute('href'),/admin\/system\/admin$/);
+  assert.equal(await page.evaluate(()=>!!tree.children.admin.children.status.children.overview),true,'original registered menu tree was changed');
   assert.equal(await page.locator('.zc-section').count(), 7);
   assert.equal(await page.locator('.zc-connection .zc-state').innerText(), 'WAN up');
   assert.match(await page.locator('.zc-addresses').innerText(), /192\.0\.2\.2/);
@@ -155,6 +160,11 @@ const server = http.createServer((req, res) => {
   assert.equal(await page.locator('.zcop-navitem.active').innerText(), '◇\nTraffic control');
   assert.match(await page.getByRole('link', { name: 'QoS', exact: true }).getAttribute('href'), /admin\/network\/cr881x_yt921x_qos$/);
   await page.evaluate(() => { L.env.dispatchpath = ['admin','status','zcop_dashboard']; document.querySelector('#topmenu').replaceChildren(); document.querySelector('#tabmenu').replaceChildren(); menu.render(tree); });
+  await page.evaluate(() => {tree.children.admin.children.status.children.zcop_dashboard.satisfied=false;document.querySelector('#topmenu').replaceChildren();document.querySelector('#tabmenu').replaceChildren();menu.render(tree);});
+  assert.equal(await page.locator('#tabmenu').getByRole('link',{name:'Dashboard',exact:true}).count(),0,'denied dashboard exposed');
+  assert.equal(await page.locator('#tabmenu').getByRole('link',{name:'System details',exact:true}).count(),1,'original permitted menu fallback lost');
+  await page.evaluate(() => {tree.children.admin.children.status.children.zcop_dashboard.satisfied=true;document.querySelector('#topmenu').replaceChildren();document.querySelector('#tabmenu').replaceChildren();menu.render(tree);});
+  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['Dashboard']);
   const beforeHidden = await page.evaluate(() => { fixture.hidden = true; document.dispatchEvent(new Event('visibilitychange')); return fixture.calls.length; });
   await page.clock.runFor(60000);
   assert.equal(await page.evaluate(() => fixture.calls.length), beforeHidden, 'hidden page polled');
@@ -251,6 +261,9 @@ const server = http.createServer((req, res) => {
    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'page overflow at ' + width);
    assert.equal(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight), false, 'document scrolls at ' + width);
    assert.equal(await page.locator('.zcop-content').evaluate(e=>e.scrollWidth>e.clientWidth+2), false, 'long dashboard values overflow at '+width);
+   const notice=await page.locator('.zcop-password-notice').boundingBox();
+   const command=await page.locator('.zcop-command').boundingBox();
+   assert.ok(notice.x>=command.x && notice.x+notice.width<=command.x+command.width+1,'notice escaped fixed bar at '+width);
   }
   await page.evaluate(async () => {fixture.overrides={};dashboard.due={};await dashboard.scheduler.refresh();});
   await page.getByRole('button', { name: 'Toggle navigation' }).click();
@@ -278,6 +291,7 @@ const server = http.createServer((req, res) => {
    await page.locator('#fixture-save').focus();
    const after = await page.locator('.zcop-command').boundingBox();
    assert.equal(after.y, before.y, 'section menu moved at ' + width);
+   assert.ok((await page.locator('.zcop-password-notice').boundingBox()).y<after.y+after.height,'notice moved with content');
    if (sidebarBefore) assert.equal((await page.locator('.zcop-sidebar').boundingBox()).y, sidebarBefore.y, 'sidebar moved');
    assert.ok(await page.locator('.zcop-content').evaluate(e => e.scrollTop > 0), 'frame did not scroll at ' + width);
    assert.equal(await page.evaluate(() => document.scrollingElement.scrollTop), 0, 'window scrolled');

@@ -1,5 +1,22 @@
 # Validation
 
+## Overview navigation and top-bar notice, 2026-11-12
+
+Theme version: 0.1.4-r1. Dashboard remains0.4.0-r1.
+
+- Overview displays only the permitted Dashboard tab. Its visual menu is a copy;
+  the registered menu tree and routes remain intact. When Dashboard is absent
+  or denied, existing permitted status pages remain the fallback.
+- The existing no-root-password condition now renders a compact notice inside
+  the fixed command bar. It preserves the password-configuration destination
+  and permission check; login/recovery notices and authentication are unchanged.
+- Unit and actual-module browser checks pass, including the one-tab Overview,
+  ACL fallback, original tree preservation, notice placement/link/width and
+  visibility while content scrolls, with a refresh indicator also present.
+- The modified ucode header compiles with the prepared host compiler. The first
+  compile caught an invalid template else delimiter; it was corrected before
+  packaging or deployment.
+
 ## Connected panes, 2026-11-12
 
 Dashboard version: 0.4.0-r1. Theme remains0.1.3-r1.

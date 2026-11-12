@@ -76,10 +76,16 @@ it does not write router configuration. To return to Bootstrap, select it in
 LuCI or set the media path to `/luci-static/bootstrap`. Authentication and
 save/apply still use LuCI's own handling.
 
-The optional dashboard appears under **Overview → Dashboard**. Its navigation
-entry requires its read ACL. Other installed applications remain in their
-registered LuCI sections, with arbitrary deeper subpages retained. The theme
-does not rewrite application URLs or replace UCI configuration workflows.
+The optional dashboard appears under **Overview → Dashboard**. Overview shows
+only Dashboard when that page is installed and permitted. Other status routes
+stay registered at their original URLs; the original status menu is the fallback
+when Dashboard is unavailable or not permitted. Other LuCI sections retain
+their installed applications and deeper subpages. No application URL or UCI
+configuration workflow is rewritten.
+
+When the existing root-password check reports no password, a compact **No
+password set** notice appears in the fixed top bar, with a link to password
+settings when that page is permitted. It does not occupy dashboard content.
 
 The dashboard uses its own presentation over existing authenticated LuCI RPC
 data. It uses connected panes with shared divider lines: device details and disk on

@@ -29,6 +29,10 @@ return baseclass.extend({
   if (!root) return;
   const menu = document.querySelector('#topmenu');
   let groups = ui.menu.getChildren(root).filter(node => node.name !== 'logout');
+  // Overview is the new dashboard entry point. Keep the registered tree and
+  // routes intact; use the original menu when the dashboard is not permitted.
+  groups = groups.map(group => group.name === 'status' && ui.menu.getChildren(group).some(child => child.name === 'zcop_dashboard')
+   ? Object.assign({}, group, { children: { zcop_dashboard: group.children.zcop_dashboard } }) : group);
   const network = groups.find(group => group.name === 'network');
   const policies = network ? ui.menu.getChildren(network).filter(child => /^(qos|sqm|qosify|nft-qos|cr881x[_-]yt921x[_-]qos)$/.test(child.name)) : [];
   const policyNames = new Set(policies.map(child => child.name));
