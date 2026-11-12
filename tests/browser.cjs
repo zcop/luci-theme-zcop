@@ -88,7 +88,10 @@ const server = http.createServer((req, res) => {
     else if (key === 'luci-rpc.getDHCPLeases') data = { dhcp_leases: Array(8).fill({}), dhcp6_leases: Array(3).fill({}) };
     else if (key === 'luci.getMountPoints') data = { result: [{ mount: '/overlay', size:64 * 1048576, free: 30 * 1048576, avail: 29 * 1048576 }] };
     else if (key === 'file.read') {
-     if (args[0] === '/proc/stat') data = { data: 'cpu  ' + Math.floor(Date.now() / 100) + ' 0 0 ' + Math.floor(Date.now() / 10) + ' 0 0 0 0 0 0\ncpu0 1 0 0 1\ncpu1 1 0 0 1\n' };
+     if (args[0] === '/proc/cpuinfo') data = {data:'processor : 0\nmodel name : ARMv8 Processor rev 4 (v8l)\nCPU architecture: 8\nCPU revision: 4\n'};
+     else if (args[0] === '/sys/devices/system/cpu/present') data = {data:'0-1\n'};
+     else if (args[0] === '/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq') data = {data:'1200000\n'};
+     else if (args[0] === '/proc/stat') data = { data: 'cpu  ' + Math.floor(Date.now() / 100) + ' 0 0 ' + Math.floor(Date.now() / 10) + ' 0 0 0 0 0 0\ncpu0 1 0 0 1\ncpu1 1 0 0 1\n' };
      else { if (fixture.optional) throw Error('optional counter unavailable'); data = { data: '48\n' }; }
     }
     if (Object.hasOwn(fixture.overrides, key)) data = fixture.overrides[key];
@@ -104,6 +107,11 @@ const server = http.createServer((req, res) => {
    document.dispatchEvent(new Event('luci-loaded'));
    await dashboard.scheduler.refresh();
   }, sources);
+  assert.equal(await page.getByRole('heading',{name:'Overview',exact:true}).count(),0);
+  assert.equal(await page.locator('.zc-dashboard-host-footer .zc-dashboard-controls').count(),1);
+  assert.match(await page.locator('.zc-specs').innerText(),/ARMv8 - 2 cores - 1\.20 GHz max/);
+  const pendingCPU = await page.locator('.zc-cpu').boundingBox();
+  const pendingRAM = await page.locator('.zc-memory').boundingBox();
   assert.match(await page.locator('.zc-cpu').innerText(), /Waiting for the next CPU sample/);
   assert.equal(await page.locator('.zc-traffic-empty').innerText(), 'Waiting for traffic samples');
   assert.equal(await page.locator('.zc-traffic-values strong').allTextContents().then(v=>v.join(',')), '—,—');
@@ -132,11 +140,15 @@ const server = http.createServer((req, res) => {
   await page.evaluate(() => dashboard.scheduler.refresh());
   assert.equal(await page.evaluate(() => dashboard.history.length), 60, 'graph history is not bounded');
   assert.ok(await page.evaluate(() => dashboard.cpuBusy > 0 && dashboard.cpuBusy < 100), 'CPU time sampling failed');
+  assert.equal((await page.locator('.zc-cpu').boundingBox()).height,pendingCPU.height,'CPU section resized when its first sample arrived');
+  assert.equal((await page.locator('.zc-memory').boundingBox()).height,pendingRAM.height,'RAM section resized after polling');
   assert.ok(await page.evaluate(() => dashboard.cpuHistory.length <= 60 && dashboard.ramHistory.length <= 60), 'resource histories are not bounded');
   assert.equal(await page.locator('.zc-sparkline').count(), 2);
   const historyBefore = await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]);
   await page.evaluate(() => {dashboard.draw();dashboard.draw();});
   assert.deepEqual(await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]),historyBefore,'redrawing duplicates resource samples');
+  const oncePaths=['/proc/cpuinfo','/sys/devices/system/cpu/present','/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq'];
+  for(const target of oncePaths) assert.equal(await page.evaluate(target=>fixture.calls.filter(c=>c.key==='file.read'&&c.args[0]===target).length,target),1,'processor data was polled repeatedly');
   const tabGeometry = await page.getByRole('link', { name: 'Dashboard', exact: true }).evaluate(e => ({ link: e.getBoundingClientRect().height, row: e.parentElement.getBoundingClientRect().height }));
   assert.ok(tabGeometry.row >= tabGeometry.link, 'menu link is vertically clipped');
   for (const mode of ['light','dark','luxury']) {
@@ -173,6 +185,7 @@ const server = http.createServer((req, res) => {
   await page.evaluate(() => dashboard.scheduler.refresh());
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   const beforePause = await page.evaluate(() => fixture.calls.length);
+  assert.equal((await page.locator('.zc-cpu').boundingBox()).height,pendingCPU.height,'CPU section resized when paused');
   await page.clock.runFor(60000);
   assert.equal(await page.evaluate(() => fixture.calls.length), beforePause, 'paused page polled');
   await page.getByRole('button', { name: 'Resume', exact: true }).click();
@@ -186,6 +199,8 @@ const server = http.createServer((req, res) => {
   assert.equal(await page.locator('.zc-traffic-empty').innerText(), 'WAN status unavailable');
   assert.equal(await page.locator('.zc-traffic-values strong').allTextContents().then(v=>v.join(',')), '—,—');
   assert.match(await page.locator('.zc-cpu').innerText(), /CPU data unavailable/);
+  assert.equal((await page.locator('.zc-cpu').boundingBox()).height,pendingCPU.height,'CPU section collapsed on failure');
+  assert.equal((await page.locator('.zc-memory').boundingBox()).height,pendingRAM.height,'RAM section collapsed on failure');
   await page.evaluate(async () => { fixture.fail = false; dashboard.due = {}; await dashboard.scheduler.refresh(); });
   // Unsupported values must stay unknown; known empty lists and zero flows
   // must remain valid zeros. Physical link and Internet reachability differ.

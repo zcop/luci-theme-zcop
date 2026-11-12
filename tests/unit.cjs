@@ -13,6 +13,16 @@ const load = name => {
 const metrics = load('metrics'), Scheduler = load('scheduler');
 
 (async () => {
+ const cpuInfo = 'processor : 0\nmodel name : ARMv8 Processor rev 4 (v8l)\nCPU architecture: 8\nCPU revision: 4\n';
+ assert.deepEqual(metrics.processor(cpuInfo, '0-1\n', '1200000\n', 'fallback'), {architecture:'ARMv8',cores:2,maxKHz:1200000});
+ assert.equal(metrics.processor(cpuInfo, '0-1,1,4', '1200000').cores,3);
+ assert.equal(metrics.processor(cpuInfo, 'invalid', '').cores,1);
+ assert.deepEqual(metrics.processor('', '', '', ''),{architecture:null,cores:null,maxKHz:null});
+ assert.equal(metrics.processor(cpuInfo,'0-1','0').maxKHz,null);
+ assert.equal(metrics.processor(cpuInfo,'0-1','NaN').maxKHz,null);
+ assert.equal(metrics.processor(cpuInfo,'0-1','9999999999999999999999').maxKHz,null);
+ assert.equal(metrics.processor(cpuInfo.replace('ARMv8 Processor','ARMv8.2 Processor'),'0-1','1200000').architecture,'ARMv8.2');
+ assert.equal(metrics.processor(cpuInfo,'0-999999999','1200000').cores,1);
  assert.deepEqual(metrics.cpu('cpu  100 2 30 400 5 6 7 0 99 10\ncpu0 1'), { total: 550, idle: 405 });
  assert.equal(metrics.cpu('missing'), null);
  assert.equal(metrics.cpuPercent({ total: 100, idle: 50 }, { total: 200, idle: 140 }), 10);

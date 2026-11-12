@@ -29,6 +29,12 @@ uses one vertical stack. Fixed sidebar/section menus and the stable outer main
 frame remain supplied by the theme. The DHCP lease footer labels leases rather
 than claiming online clients.
 
+The top Dashboard tab is the page title; there is no duplicate Overview heading
+inside the view. Refresh status, interval and pause/refresh controls are placed
+in the existing page footer. CPU/RAM plots retain their space while loading or
+unavailable, and their annotation rows retain two lines of space, so polling
+does not move neighboring sections.
+
 CPU/RAM plots use existing15-second snapshots, without any additional request.
 Each browser-local array is limited to60 numeric samples/gap markers. A single
 sample is a point; missing values and resets break the plotted line. Plots span
@@ -48,7 +54,7 @@ database. One collector runs at a time; numeric history stays in the browser.
 
 | Snapshot | Refresh while visible | Source |
 | --- | --- | --- |
-| Board identity | Once per page | system.board |
+| Board/processor identity | Once per page | system.board, /proc/cpuinfo, CPU present list and policy0 cpuinfo_max_freq |
 | WAN counters | 5 seconds; selectable 10 seconds or manual | Selected WAN L3 device status |
 | CPU, memory, uptime and interface/link state | 15 seconds | /proc/stat, system.info and existing network summaries |
 | Radio state, leases and optional accelerated-flow counts | 30 seconds | Existing luci-rpc summaries and two debugfs scalar reads |
@@ -60,6 +66,11 @@ CPU busy percentage uses CPU-time deltas, not load average or a shell top comman
 
 ## Accuracy
 
+- Processor details use reported architecture, present CPU IDs (including an
+  offline present CPU), and the maximum cpufreq value in kHz. The display converts
+  that value to GHz; it does not use BogoMIPS, a changing current clock, CPU
+  revision as an ISA minor version, or a hardcoded board frequency. Missing
+  fields remain unavailable. The CR881x reports ARMv8,2 cores and1200000kHz.
 - Interface up does not verify gateway, DNS or Internet connectivity. No probe
   runs. Absent link information differs from a reported disconnected port.
 - RAM percentage is (MemTotal - MemAvailable) / MemTotal. Its capacity is the

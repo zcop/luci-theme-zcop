@@ -35,11 +35,19 @@ function uptime(seconds) {
 }
 
 return view.extend({
- load() { return L.resolveDefault(board(), {}); },
+ async load() {
+  const [identity, cpuinfo, present, maximum] = await Promise.all([
+   L.resolveDefault(board(), {}), L.resolveDefault(read('/proc/cpuinfo'), ''),
+   L.resolveDefault(read('/sys/devices/system/cpu/present'), ''),
+   L.resolveDefault(read('/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq'), '')
+  ]);
+  return Object.assign({}, identity, { zcopProcessor: metrics.processor(cpuinfo, present, maximum, identity.system) });
+ },
  render(identity) {
   if (!document.querySelector('#zcop-dashboard-style'))
    document.head.append(E('link', { id: 'zcop-dashboard-style', rel: 'stylesheet', href: L.resource('zcop/dashboard.css') }));
   this.identity = identity;
+  this.processor = identity.zcopProcessor || {};
   this.state = {};
   this.due = {};
   this.latestDevice = null;
@@ -68,17 +76,18 @@ return view.extend({
   const cadence = E('select', { 'aria-label': _('Refresh interval'), 'change': event => {
    this.scheduler.setInterval(Number(event.target.value));
   } }, [E('option', { value: '5000' }, _('5 seconds')), E('option', { value: '10000' }, _('10 seconds')), E('option', { value: '0' }, _('Manual'))]);
-  const root = E('div', { 'class': 'zc-dashboard' }, [
-   E('h2', { 'class': 'zcop-sr-only' }, _('Dashboard')),
-   E('div', { 'class': 'zc-dashboard-meta' }, [
-    E('div', { 'class': 'zc-dashboard-title' }, [E('h3', {}, _('Overview'))]),
-    E('div', { 'class': 'zc-dashboard-controls' }, [this.status, cadence,
-     E('button', { 'type': 'button', 'class': 'btn', 'click': () => this.scheduler.refresh() }, _('Refresh')), pause])]),
-   this.body
-  ]);
+  const root = E('div', { 'class': 'zc-dashboard' }, [E('h2', { 'class': 'zcop-sr-only' }, _('Dashboard')), this.body]);
+  this.controls = E('div', { 'class': 'zc-dashboard-controls' }, [this.status, cadence,
+   E('button', { 'type': 'button', 'class': 'btn', 'click': () => this.scheduler.refresh() }, _('Refresh')), pause]);
+  const footer = document.querySelector('.zcop-footer');
+  if (footer) {
+   footer.classList.add('zc-dashboard-host-footer');
+   footer.append(this.controls);
+  } else root.append(E('footer', { 'class': 'zc-dashboard-host-footer' }, this.controls));
   this.onVisibility = () => this.scheduler.visibility(document.hidden);
   document.addEventListener('visibilitychange', this.onVisibility);
   window.addEventListener('pagehide', () => { this.scheduler.stop(); document.removeEventListener('visibilitychange', this.onVisibility); }, { once: true });
+  this.draw();
   this.scheduler.plan(0);
   return root;
  },
@@ -144,7 +153,8 @@ return view.extend({
    this.wanBaseline = next; this.wanTime = state.wan.time;
   } else if (!wan?.up || !wanSample || wanSample.device !== wan.l3_device) { this.traffic = null; this.wanBaseline = null; }
   const peak = Math.max(1, ...this.history.filter(Boolean).flatMap(sample => [sample.down, sample.up]));
-  const trafficMessage = this.failures.interfaces ? _('WAN status unavailable')
+  const trafficMessage = !state.interfaces && !this.failures.interfaces ? _('Collecting network status…')
+   : this.failures.interfaces ? _('WAN status unavailable')
    : !wan ? _('No WAN configured')
    : wan.up === false ? _('WAN interface is down')
    : wan.up !== true ? _('WAN status unavailable')
@@ -152,12 +162,14 @@ return view.extend({
    : this.failures.wan ? _('Traffic counters unavailable')
    : !this.traffic ? _('Waiting for traffic samples') : null;
   const identity = this.identity || {}, release = identity.release || {};
-  const cores = (cpu || '').match(/^cpu[0-9]+\s/gm)?.length;
+  const cores = this.processor.cores;
   const deviceInfo = section(_('Device'), [
    E('div', { 'class': 'zc-device-model' }, identity.model || _('Unavailable')),
    E('div', { 'class': 'zc-specs' }, [
     pair(_('Hostname'), identity.hostname || '—'),
-    pair(_('Processor'), [identity.system, cores ? cores + ' ' + _('cores') : ''].filter(Boolean).join(' · ') || '—'),
+    pair(_('Processor'), [this.processor.architecture || _('Unavailable'),
+     cores ? cores + ' ' + _('cores') : _('Core count unavailable'),
+     this.processor.maxKHz ? (this.processor.maxKHz / 1000000).toFixed(2) + ' GHz ' + _('max') : _('Max speed unavailable')].join(' - ')),
     pair(_('Platform'), release.target || '—'),
     pair(_('Firmware'), [release.distribution, release.version].filter(Boolean).join(' ') || '—'),
     pair(_('Build'), release.revision || '—'),
@@ -165,7 +177,7 @@ return view.extend({
     pair(_('Uptime'), uptime(current('system')?.uptime))
    ])
   ], 'identity');
-  const cpuPending = cpu && this.cpuBaseline && !Number.isFinite(this.cpuBusy);
+  const cpuPending = !this.failures.cpu && (!state.cpu || cpu && this.cpuBaseline && !Number.isFinite(this.cpuBusy));
   const memoryUsed = Number.isFinite(memory.total) && memory.total > 0 && Number.isFinite(memory.available)
    && memory.available >= 0 && memory.available <= memory.total ? memory.total - memory.available : null;
   const disk = this.storage(current('mounts'));
@@ -176,13 +188,13 @@ return view.extend({
   }
   const cpuPanel = section(_('CPU usage'), [
    E('strong', { 'class': 'zc-util-value' }, Number.isFinite(this.cpuBusy) ? number(this.cpuBusy) + '%' : '—'),
-   Number.isFinite(this.cpuBusy) ? this.sparkline(this.cpuHistory, _('Recent CPU busy samples')) : null,
+   E('div', { 'class': 'zc-trend-slot' }, this.sparkline(Number.isFinite(this.cpuBusy) ? this.cpuHistory : [], _('Recent CPU busy samples'))),
    E('p', { 'class': 'zc-note' }, cpuPending ? _('Waiting for the next CPU sample')
     : !Number.isFinite(this.cpuBusy) ? _('CPU data unavailable') : _('Busy time') + (cores ? ' · ' + cores + ' ' + _('cores') : ''))
   ], 'cpu');
   const ramPanel = section(_('RAM usage'), [
    E('strong', { 'class': 'zc-util-value' }, memoryUsed === null ? '—' : number(memoryUsed / memory.total * 100) + '%'),
-   memoryUsed === null ? null : this.sparkline(this.ramHistory, _('Recent RAM usage samples')),
+   E('div', { 'class': 'zc-trend-slot' }, this.sparkline(memoryUsed === null ? [] : this.ramHistory, _('Recent RAM usage samples'))),
    E('p', { 'class': 'zc-note' }, memoryUsed === null ? _('Memory data unavailable')
     : mib(memory.available) + ' ' + _('available') + ' / ' + mib(memory.total) + ' ' + _('Linux RAM'))
   ], 'memory');

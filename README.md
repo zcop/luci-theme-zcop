@@ -92,6 +92,9 @@ data. It uses connected panes with shared divider lines: device details and disk
 the left, WAN activity and logical interfaces in the wider center, and compact
 CPU/RAM trends plus ports/radios on the right. A quiet background separates
 the device pane without rounded cards. Panes reflow as the frame narrows.
+Refresh controls sit in the page footer. CPU/RAM sections retain their size
+through pending/error states. Processor architecture, present-core count and
+maximum frequency are read once per page; unavailable fields are not guessed.
 Detailed configuration stays on the existing pages. Missing data is shown as
 unavailable; an interface being up does not claim Internet reachability, and
 lease counts do not claim that clients are online.

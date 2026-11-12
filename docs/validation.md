@@ -1,5 +1,24 @@
 # Validation
 
+## Footer, stable metrics and processor details, 2026-11-12
+
+Dashboard version: 0.4.1-r1. Theme remains0.1.4-r1.
+
+- Removed the duplicate Overview heading. Refresh controls/status now appear
+  in the existing page footer, outside the dashboard data rerender region.
+- CPU/RAM chart slots remain present while pending, failed or recovering.
+  Their annotations retain a consistent height. Browser checks compare panel
+  geometry before the first sample, after updates, on failure and when paused.
+- Processor metadata is read once per page through three narrowly allowed file
+  paths: /proc/cpuinfo, /sys/devices/system/cpu/present and the policy0
+  cpuinfo_max_freq file. The recurring collector is unchanged. The live router
+  reports architecture8, present CPUs0-1, maximum1200000kHz; revision4 is not
+  treated as architecture8.4.
+- Unit checks cover ranges/duplicates, offline-present cores, absent or invalid
+  fields, frequency parsing and architecture/revision separation. Browser
+  fixtures verify the processor label and that these fields are never polled.
+- Existing metric, scheduling, menu, ACL-fallback and responsive checks pass.
+
 ## Overview navigation and top-bar notice, 2026-11-12
 
 Theme version: 0.1.4-r1. Dashboard remains0.4.0-r1.
