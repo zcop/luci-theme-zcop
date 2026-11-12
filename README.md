@@ -22,7 +22,7 @@ Application rendered with synthetic test data; these are not live router values.
 | Package | Purpose |
 | --- | --- |
 | `luci-theme-zcop` | Theme, connected sidebar, registered LuCI page menus, three browser-local palettes and mobile navigation. |
-| `luci-app-zcop-dashboard` | Optional read-only network overview: one traffic chart, router health, Ethernet ports and Wi-Fi radios, plus compact connection, lease and acceleration summaries. |
+| `luci-app-zcop-dashboard` | Compact overview: device specs, CPU/RAM/disk utilization, WAN activity/state, logical interfaces, physical ports and radio status. |
 
 The theme depends on `luci-theme-bootstrap` to preserve LuCI's established form,
 authentication, modal, save/apply and rollback contracts. No LuCI core patch or
@@ -82,8 +82,10 @@ registered LuCI sections, with arbitrary deeper subpages retained. The theme
 does not rewrite application URLs or replace UCI configuration workflows.
 
 The dashboard uses its own presentation over existing authenticated LuCI RPC
-data. Its fixed layout adapts to the available frame width: connection state
-at the top, traffic and CPU/RAM below, then physical ports and radio state.
+data. It arranges open sections at unequal widths to fit their content: device
+specs, utilization and network status, followed by traffic, logical interfaces
+and physical ports/radios. Fine rules and a subtle background separate sections
+without rounded cards. The layout adapts to the available frame width.
 Detailed configuration stays on the existing pages. Missing data is shown as
 unavailable; an interface being up does not claim Internet reachability, and
 lease counts do not claim that clients are online.
@@ -106,10 +108,11 @@ See [dashboard design and acceptance](docs/dashboard-design.md).
 
 ## Preview and verification
 
-Open [preview/index.html](preview/index.html) for the approved static design.
-Its sample values are never used by the live dashboard. This preview is more
-detailed than the initial live widgets; live association counts, service
-health badges and per-client statistics are not implemented.
+The screenshots above show the current dashboard rendered against synthetic
+RPC fixtures. [preview/index.html](preview/index.html) is the earlier standalone
+concept and does not represent the current layout. Its sample values are never
+used by the live dashboard. Association counts, service health badges and
+per-client statistics from that earlier concept are not implemented.
 
 Run `node tests/unit.cjs` for metric and scheduler checks. The browser harness
 in `tests/browser.cjs` exercises the actual theme menu and live view with

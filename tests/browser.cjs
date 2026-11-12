@@ -80,15 +80,15 @@ const server = http.createServer((req, res) => {
     if (fixture.fail) throw Error('fixture unavailable');
     let data;
     if (key === 'system.info') data = { uptime: 187200, memory: { total: 170917888, available: 36280729 } };
-    else if (key === 'system.board') data = { model: 'CR881x · synthetic fixture' };
-    else if (key === 'network.interface.dump') data = { interface: [{ interface: 'wan', up: !fixture.down, l3_device: fixture.wanDevice, proto: 'dhcp', 'ipv4-address': [{address:'192.0.2.2'}] }] };
+    else if (key === 'system.board') data = { model:'CR881x · synthetic fixture',hostname:'router-fixture',system:'ARMv8',kernel:'6.18.60',release:{distribution:'OpenWrt',version:'SNAPSHOT',revision:'test-build',target:'qualcommax/ipq50xx'} };
+    else if (key === 'network.interface.dump') data = { interface: [{ interface:'lan',up:true,l3_device:'br-lan',proto:'static','ipv4-address':[{address:'192.0.2.1'}] }, { interface: 'wan', up: !fixture.down, l3_device: fixture.wanDevice, proto: 'dhcp', 'ipv4-address': [{address:'192.0.2.2'}] }] };
     else if (key === 'network.device.status') data = { statistics: { rx_bytes: Math.floor(Date.now() / 1000 * 10300000), tx_bytes: Math.floor(Date.now() / 1000 * 1600000) } };
     else if (key === 'luci-rpc.getNetworkDevices') data = Object.fromEntries(['wan','lan1','lan2','lan3'].map(n => [n, { link: { carrier: n === 'wan' || n === 'lan3', speed: 1000 } }]));
     else if (key === 'luci-rpc.getWirelessDevices') data = { radio0: { up: true, iwinfo: { channel: 1, frequency:2412 }, interfaces: [{ config: { ssid: 'Fixture 2.4 GHz' } }] }, radio1: { up: true, iwinfo: { channel: 36, frequency:5180 }, interfaces: [{ config: { ssid: 'Fixture 5 GHz' } }] } };
     else if (key === 'luci-rpc.getDHCPLeases') data = { dhcp_leases: Array(8).fill({}), dhcp6_leases: Array(3).fill({}) };
-    else if (key === 'luci.getMountPoints') data = { result: [{ mount: '/overlay', free: 30 * 1048576, avail: 29 * 1048576 }] };
+    else if (key === 'luci.getMountPoints') data = { result: [{ mount: '/overlay', size:64 * 1048576, free: 30 * 1048576, avail: 29 * 1048576 }] };
     else if (key === 'file.read') {
-     if (args[0] === '/proc/stat') data = { data: 'cpu  ' + Math.floor(Date.now() / 100) + ' 0 0 ' + Math.floor(Date.now() / 10) + ' 0 0 0 0 0 0\n' };
+     if (args[0] === '/proc/stat') data = { data: 'cpu  ' + Math.floor(Date.now() / 100) + ' 0 0 ' + Math.floor(Date.now() / 10) + ' 0 0 0 0 0 0\ncpu0 1 0 0 1\ncpu1 1 0 0 1\n' };
      else { if (fixture.optional) throw Error('optional counter unavailable'); data = { data: '48\n' }; }
     }
     if (Object.hasOwn(fixture.overrides, key)) data = fixture.overrides[key];
@@ -111,12 +111,15 @@ const server = http.createServer((req, res) => {
   await page.evaluate(() => dashboard.scheduler.refresh());
   await page.clock.runFor(5000);
   await page.evaluate(() => dashboard.scheduler.refresh());
-  assert.equal(await page.locator('.zc-widget').count(), 4);
-  assert.equal(await page.locator('.zc-connection .zc-state').innerText(), 'Interface up');
+  assert.equal(await page.locator('.zc-section').count(), 6);
+  assert.equal(await page.locator('.zc-connection .zc-state').innerText(), 'WAN up');
   assert.match(await page.locator('.zc-addresses').innerText(), /192\.0\.2\.2/);
   assert.equal(await page.locator('.zc-radio-heading strong').allTextContents().then(v=>v.join(',')), '2.4 GHz,5 GHz');
   assert.equal(await page.locator('.zc-radio .zc-state-up').count(), 2);
-  assert.equal(await page.locator('.zc-datum').filter({ hasText: 'Writable storage free' }).innerText(), 'Writable storage free\n29.0 MiB');
+  assert.match(await page.locator('.zc-system .zc-gauge').last().innerText(), /53\.1%/);
+  assert.match(await page.locator('.zc-system .zc-gauge').last().innerText(), /29\.0 MiB free \/ 64\.0 MiB/);
+  assert.match(await page.locator('.zc-identity').innerText(), /6\.18\.60/);
+  assert.match(await page.locator('.zc-interface').filter({hasText:'br-lan'}).innerText(), /192\.0\.2\.1/);
   assert.match(await page.locator('.zc-traffic-values').innerText(), /82\.4 Mbps/);
   assert.equal(await page.getByRole('link', { name: 'Denied' }).count(), 0);
   assert.equal(await page.getByRole('link', { name: 'Traffic control', exact: true }).count(), 1);
@@ -130,6 +133,14 @@ const server = http.createServer((req, res) => {
    await page.locator(`[data-zcop-palette="${mode}"]`).click();
    await page.screenshot({ path: path.join(output, 'live-fixture-' + mode + '.png'), fullPage: true });
   }
+  const sectionStyle = await page.locator('.zc-section').evaluateAll(sections => sections.every(section => {
+   const css = getComputedStyle(section);
+   return css.borderRadius === '0px' && css.borderLeftWidth === '0px' && css.borderRightWidth === '0px';
+  }));
+  assert.ok(sectionStyle, 'overview sections reverted to boxed cards');
+  const identityBox = await page.locator('.zc-identity').boundingBox();
+  const resourceBox = await page.locator('.zc-system').boundingBox();
+  assert.ok(identityBox.width > resourceBox.width * 1.3, 'sections lost content-based widths');
   await page.evaluate(() => { L.env.dispatchpath = ['admin','network','plugin','detail']; document.querySelector('#topmenu').replaceChildren(); document.querySelector('#tabmenu').replaceChildren(); menu.render(tree); });
   assert.equal(await page.getByRole('link', { name: 'Third-party app', exact: true }).count(), 1);
   assert.equal(await page.getByRole('link', { name: 'Deep settings', exact: true }).count(), 1);
@@ -179,6 +190,13 @@ const server = http.createServer((req, res) => {
   assert.match(await page.locator('.zc-radio').last().innerText(), /Disabled/);
   assert.equal(await page.locator('.zc-network-footer .zc-datum strong').allTextContents().then(v=>v.join(',')), '—,—');
   await page.evaluate(async () => {
+   fixture.overrides['system.info'] = {memory:{total:0,available:1}};
+   fixture.overrides['luci.getMountPoints'] = {result:[]};
+   dashboard.due={}; await dashboard.scheduler.refresh();
+  });
+  assert.match(await page.locator('.zc-system').innerText(), /Memory data unavailable/);
+  assert.match(await page.locator('.zc-system').innerText(), /Storage data unavailable/);
+  await page.evaluate(async () => {
    fixture.overrides['luci-rpc.getDHCPLeases'] = {dhcp_leases:[],dhcp6_leases:[]};
    fixture.overrides['file.read'] = {data:'0\n'};
    dashboard.due = {}; await dashboard.scheduler.refresh();
@@ -213,11 +231,22 @@ const server = http.createServer((req, res) => {
   assert.equal(await page.locator('.zc-chart').count(), 1, 'valid idle samples lost their chart');
   assert.equal(await page.locator('.zc-traffic-empty').count(), 0, 'valid idle zero mislabeled as missing');
   await page.evaluate(async () => {fixture.overrides={}; dashboard.due={}; await dashboard.scheduler.refresh();});
-  for (const [width,height] of [[1366,650],[1536,720],[1920,850],[768,1024],[390,844]]) {
+  await page.evaluate(async () => {
+   fixture.overrides = {'network.interface.dump':{interface:[
+    {interface:'wan',up:true,proto:'pppoe',l3_device:'pppoe-wan', 'ipv4-address':[{address:'192.0.2.2'}]},
+    {interface:'wan_6',up:true,proto:'dhcpv6','ipv6-address':[{address:'2001:db8:1234:5678:9abc:def0:1234:5678'}]},
+    {interface:'a-long-logical-interface-name',up:true,proto:'static',l3_device:'br-long-interface','ipv4-address':[{address:'198.51.100.42'}]}
+   ]}};
+   dashboard.due={}; await dashboard.scheduler.refresh();
+  });
+  assert.match(await page.locator('.zc-addresses').innerText(), /2001:db8:1234:5678:9abc:def0:1234:5678/);
+  for (const [width,height] of [[1366,650],[1536,720],[1920,850],[1024,768],[768,1024],[390,844]]) {
    await page.setViewportSize({ width,height });
    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'page overflow at ' + width);
    assert.equal(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight), false, 'document scrolls at ' + width);
+   assert.equal(await page.locator('.zcop-content').evaluate(e=>e.scrollWidth>e.clientWidth+2), false, 'long dashboard values overflow at '+width);
   }
+  await page.evaluate(async () => {fixture.overrides={};dashboard.due={};await dashboard.scheduler.refresh();});
   await page.getByRole('button', { name: 'Toggle navigation' }).click();
   assert.equal(await page.getByRole('button', { name: 'Toggle navigation' }).getAttribute('aria-expanded'), 'true');
   await page.getByRole('link', {name:'Services',exact:true}).focus();

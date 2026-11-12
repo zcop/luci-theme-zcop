@@ -1,5 +1,32 @@
 # Validation
 
+## Compact sections, 2026-11-12
+
+Dashboard version: 0.3.0-r1. Theme remains 0.1.3-r1.
+
+Replaced the large rounded panels with six open sections at unequal widths:
+device specifications, CPU/RAM/disk utilization, network status, WAN activity,
+logical interfaces, and physical ports/radio state. Fine rules and one quiet
+square background separate the sections. No minimum section/chart-placeholder
+height is imposed on idle content.
+
+- Unit and actual-module browser checks pass. Added assertions cover unboxed
+  sections, unequal widths, actual disk utilization and capacity, device specs,
+  logical interface addresses, generated IPv6 interfaces and missing resource
+  values. Long interface names and IPv6 values fit at390–1920px viewport widths.
+- The disk calculation was checked against the existing getMountPoints schema
+  and the router's live overlay byte counts. It uses size-free for utilization
+  and avail for writable free bytes; filesystem reservations remain distinct.
+- Device identity reuses the existing once-per-page board snapshot; core count
+  comes from the existing CPU-time snapshot. The collector, scheduler, RPC ACL
+  and refresh schedule are unchanged.
+- Updated screenshots render the actual application against explicitly marked
+  synthetic RPC fixtures; they do not present sample values as router readings.
+
+The bounded third-party source review timed out without a verdict. It is not
+review approval; acceptance for this revision uses primary source inspection,
+the checks above and separate package/live verification.
+
 ## Idle and initial states, 2026-11-12
 
 Dashboard version: 0.2.1-r1. Theme remains 0.1.3-r1.
