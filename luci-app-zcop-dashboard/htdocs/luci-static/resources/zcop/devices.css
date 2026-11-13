@@ -8,3 +8,24 @@
 .zc-devices-controls{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;font-size:11px;margin-left:auto}.zc-devices-controls select{width:auto;font-size:11px;padding:2px 5px;height:27px}.zc-devices-controls button{font-size:11px}.zc-devices-footer{align-items:center;flex-wrap:wrap}
 @media(max-width:1000px){.zc-devices-table th:last-child{width:100px}}
 @media(max-width:720px){.zc-devices-toolbar input{width:100%}.zc-devices-count{flex-basis:100%}.zc-devices-table,.zc-devices-table tbody{display:block}.zc-devices-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.zc-devices-table tr{display:block;padding:12px 0;border-bottom:1px solid var(--zc-line)}.zc-devices-table td{display:block;position:relative;min-height:26px;padding:4px 0 4px 110px;border:0}.zc-devices-table td:before{content:attr(data-label);position:absolute;top:4px;left:0;width:100px;color:var(--zc-muted);font-size:11px}.zc-devices-table td:nth-child(2){min-height:42px}.zc-devices-table td[colspan]{padding:12px 0}.zc-devices-table td[colspan]:before{display:none}.zc-devices-table td>strong{display:block}.zc-devices-table td>*{min-width:0}.zc-devices-controls{justify-content:flex-start;margin-left:0}.zc-devices-refresh{flex-basis:100%}}
+.zc-device-badge{font-size:11px;font-weight:600;color:var(--zc-text)}.zc-devices-table th:nth-child(2){width:24%}.zc-devices-table th:nth-child(3){width:24%}.zc-devices-table th:last-child{width:105px}
+.zcop-theme .zc-devices-table .zc-device-actions{width:100%;min-width:0;max-width:100%;font-size:11px;white-space:nowrap}.zcop-theme .zc-device-actions[open]{z-index:2}.zcop-theme .zc-device-actions>ul.dropdown{min-width:170px;max-width:min(280px,80vw)}
+@media(max-width:720px){.zcop-theme .zc-devices-table .zc-device-actions{width:110px}.zc-devices-table td:nth-child(2){min-height:26px}}
+
+@media(pointer:fine){.zcop-theme .zc-device-actions[open]>ul.dropdown{left:auto;right:0}}
+
+/* Device identity: readable, selectable MAC text with a small copy affordance. */
+.zc-devices-table{min-width:900px}.zc-devices-table th:first-child{width:180px}
+.zc-device-mac-block{margin-top:6px;max-width:100%}
+.zcop-theme .zc-devices-table .zc-device-mac{display:inline-flex;align-items:center;gap:6px;min-height:0;height:auto;max-width:100%;margin:0;padding:0;border:0;border-radius:2px;background:transparent;color:var(--zc-text);font:600 12.5px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.015em;box-shadow:none;text-align:left;cursor:pointer}
+.zc-device-mac>span:first-child{user-select:text;overflow-wrap:anywhere}
+.zc-device-mac-copy{font:12px/1 system-ui,sans-serif;color:var(--zc-muted);opacity:.7}
+.zc-device-mac:hover .zc-device-mac-copy{color:var(--zc-accent);opacity:1}
+.zc-device-vendor{min-height:18px;max-width:100%;font-size:11px;line-height:18px;color:var(--zc-muted);overflow-wrap:anywhere}
+.zcop-theme .zc-device-vendor-query{min-height:0;height:auto;line-height:18px;margin:0;padding:0;border:0;border-radius:2px;background:transparent;box-shadow:none;color:var(--zc-accent);font-size:11px;text-align:left}
+.zc-devices-vendor-mode{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--zc-muted);margin:0}
+.zc-devices-vendor-mode select{color:var(--zc-text)}
+.zc-devices-vendor-notice{font-size:11px;line-height:1.5;color:var(--zc-muted);margin:-8px 0 14px}
+.zc-devices-toolbar>button{margin:0!important;white-space:nowrap}
+.zc-devices-toolbar>[hidden]{display:none!important}
+@media(max-width:720px){.zc-devices-table{min-width:0}.zc-device-mac-block{margin-top:4px}.zc-devices-vendor-mode{margin-right:auto}}

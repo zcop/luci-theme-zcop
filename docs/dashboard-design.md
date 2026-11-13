@@ -1,4 +1,4 @@
-# Compact overview, revision 07
+# Compact overview, revision 09
 
 The overview summarizes the router for a quick glance. It uses its own
 presentation over existing authenticated LuCI RPC snapshots; configuration
@@ -40,7 +40,8 @@ than claiming online clients.
 
 The top Dashboard tab is the page title; there is no duplicate Overview heading
 inside the view. Refresh status, interval and pause/refresh controls are placed
-in the existing page footer. CPU/RAM plots retain their space while loading or
+in a dedicated page footer inside the main frame. The firmware/version and
+theme-credit footer sits outside the frame in a stationary viewport row. CPU/RAM plots retain their space while loading or
 unavailable, and their annotation rows retain two lines of space, so polling
 does not move neighboring sections.
 
@@ -57,9 +58,13 @@ inventing data to fill startup history.
 There is no widget editor, drag/resize library, live event
 stream, network scan or traffic classification. Documentation screenshots render
 the actual application with explicitly marked synthetic RPC fixtures. A separate
-Overview Devices tab provides passive lease/reservation/neighbour records and
-explicit static-lease staging; it is not part of the Dashboard collector. The
+Overview Devices tab adds passive lease/reservation/neighbour/FDB and local AP
+association records, with explicit friendly-name/static-lease staging; it is not part of the Dashboard collector. The
 user-supplied reference image is not redistributed in this repository.
+
+The separate Overview Wireless page provides manual radio snapshots and explicit
+channel scans. It does not add work to the Dashboard collector. See the README
+for scan scope and recommendation limits.
 
 ## Data and resource budget
 
@@ -95,6 +100,19 @@ CPU busy percentage uses CPU-time deltas, not load average or a shell top comman
   lower than total free bytes. Other read-only firmware mounts are not summed.
 - Radio up is distinct from disabled/down/unknown. An up radio with an explicitly
   empty interface list shows No networks. No client associations are inferred.
+- Physical socket identity is separate from the assigned LAN/WAN1/WAN2 role and
+  carrier/speed. Each port shows one current-role label: WAN1/WAN2 or its stable
+  LAN number (the fourth socket is LAN4 in LAN mode). Physical device IDs stay
+  behind the presentation, in the port mapping/tooltip. No duplicated physical
+  name plus role badge is displayed. The optional WAN Mode status RPC supplies WAN assignments;
+  the existing device snapshot supplies current `br-lan` members. The helper's
+  unset LAN list is not treated as proof of an empty bridge. Explicit VLAN
+  uppers can share a socket; overlapping untagged roles show Conflict. Arbitrary
+  PPP/tunnel/bond/bridge names are not guessed as physical sockets. Missing or
+  failed role status shows Unknown, never a stale or name-derived role. The
+  existing device cadence also refreshes roles every15 seconds; hidden/paused
+  collection stops both. Links use the permitted WAN Mode menu entry, and the
+  Dashboard ACL grants only its read-only status method.
 - WAN IPv6 includes the matching dedicated or generated IPv6 interface when
   reported. Logical interfaces remain individually listed.
 - Zero accelerated flows is valid at idle; unavailable counters remain unknown.

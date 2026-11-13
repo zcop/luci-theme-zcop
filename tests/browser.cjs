@@ -13,7 +13,7 @@ fs.mkdirSync(output, { recursive: true });
 const bootstrap = process.env.LUCI_BOOTSTRAP_CSS;
 if (!bootstrap) throw Error('Set LUCI_BOOTSTRAP_CSS to an installed/bootstrap source cascade.css');
 
-const fixture = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/luci-static/zcop/cascade.css"><script src="/luci-static/zcop/palette.js"></script></head><body class="zcop-theme"><div class="zcop-layout"><aside id="mainmenu" class="zcop-sidebar"><a class="zcop-brand" href="/"><img src="/luci-static/zcop/logo.svg" width="30" height="30" alt=""><span>CR881x<small>Router control</small></span></a><nav id="topmenu"></nav><div class="zcop-sidebar-bottom"><div class="zcop-palettes"><button data-zcop-palette="light">Light</button><button data-zcop-palette="dark">Dark</button><button data-zcop-palette="luxury">Luxury</button></div></div></aside><main id="maincontent" class="zcop-main"><div class="zcop-command"><button class="zcop-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button><nav id="tabmenu"></nav><a class="zcop-password-notice" href="/cgi-bin/luci/admin/system/admin"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M7 1 13 12H1Z"/><path d="M7 4v4m0 2v.1"/></svg><span>No password set</span></a><div id="indicators"><span>Refreshing</span></div></div><div class="zcop-content"><div id="view"></div><footer class="zcop-footer"><span>Synthetic RPC fixture · no router connection</span><span>Zcop theme</span></footer></div></main></div></body></html>`;
+const fixture = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/luci-static/zcop/cascade.css"><script src="/luci-static/zcop/palette.js"></script></head><body class="zcop-theme"><div class="zcop-layout"><aside id="mainmenu" class="zcop-sidebar"><a class="zcop-brand" href="/"><img src="/luci-static/zcop/logo.svg" width="30" height="30" alt=""><span>CR881x<small>Router control</small></span></a><nav id="topmenu"></nav><div class="zcop-sidebar-bottom"><div class="zcop-palettes"><button data-zcop-palette="light">Light</button><button data-zcop-palette="dark">Dark</button><button data-zcop-palette="luxury">Luxury</button></div></div></aside><main id="maincontent" class="zcop-main"><div class="zcop-command"><button class="zcop-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button><nav id="tabmenu"></nav><a class="zcop-password-notice" href="/cgi-bin/luci/admin/system/admin"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M7 1 13 12H1Z"/><path d="M7 4v4m0 2v.1"/></svg><span>No password set</span></a><div id="indicators"><span>Refreshing</span></div></div><div class="zcop-content"><div id="view"></div><div class="zcop-page-footer zcop-footer"></div></div></main><footer class="zcop-branding-footer"><span>Synthetic RPC fixture · no router connection</span><span>Zcop theme</span></footer></div></body></html>`;
 
 const server = http.createServer((req, res) => {
  const pathname = new URL(req.url, 'http://localhost').pathname;
@@ -46,6 +46,7 @@ const server = http.createServer((req, res) => {
    scheduler: read('luci-app-zcop-dashboard/htdocs/luci-static/resources/zcop/scheduler.js'),
    dashboard: read('luci-app-zcop-dashboard/htdocs/luci-static/resources/view/zcop/dashboard.js')
   };
+  if (process.env.LEGACY_DASHBOARD === '1') sources.dashboard=sources.dashboard.replace("document.querySelector('.zcop-page-footer')","document.querySelector('.zcop-footer')");
   await page.evaluate(async sources => {
    window._ = s => s;
    window.E = (tag, attrs, children) => {
@@ -60,7 +61,7 @@ const server = http.createServer((req, res) => {
    const child = (title, children = {}, more = {}) => ({ title, children, satisfied: true, ...more });
    window.tree = { children: { admin: child('Administration', {
     status: child('Status', { zcop_dashboard: child('Dashboard', {}, {order:0}), overview: child('Overview'), routesj:child('Routing'), nftables:child('Firewall'), logs:child('System Log',{syslog:child('System Log'),dmesg:child('Kernel Log')},{action:{type:'alias',path:'admin/status/logs/syslog'}}),processes:child('Processes'),channel_analysis:child('Channel Analysis'),wireguard:child('WireGuard'),realtime:child('Realtime Graphs'),custom_monitor:child('App monitor',{details:child('Monitor details')}),custom_alias:child('App alias',{}, {action:{type:'alias',path:'admin/network/plugin'}}),hidden: child('Denied', {}, { satisfied: false }) }),
-    network: child('Network', { network: child('Interfaces'), wireless: child('Wireless'), diagnostics:child('Diagnostics'), cr881x_yt921x_qos: child('QoS'), plugin: child('Third-party app', { detail: child('Deep settings') }) }),
+    network: child('Network', { network: child('Interfaces'), wireless: child('Wireless'), diagnostics:child('Diagnostics'), 'cr881x-wan-mode':child('CR881x WAN Mode'), cr881x_yt921x_qos: child('QoS'), plugin: child('Third-party app', { detail: child('Deep settings') }) }),
     system: child('System', { system: child('System') }),
     services: child('Services', { application: child('Installed application') }), logout: child('Log out')
    }) } };
@@ -89,12 +90,14 @@ const server = http.createServer((req, res) => {
    const rpc = { declare: options => async (...args) => {
     const key = options.object + '.' + options.method; fixture.calls.push({ key, args, time: Date.now() });
     if (fixture.fail) throw Error('fixture unavailable');
+    if (key === 'luci.cr881x_wan_mode.status' && fixture.portModeFailure) throw Error('optional app unavailable');
     let data;
     if (key === 'system.info') data = { uptime: 187200, memory: { total: 170917888, available: 36280729 } };
     else if (key === 'system.board') data = { model:'CR881x · synthetic fixture',hostname:'router-fixture',system:'ARMv8',kernel:'6.18.60',release:{distribution:'OpenWrt',version:'SNAPSHOT',revision:'test-build',target:'qualcommax/ipq50xx'} };
     else if (key === 'network.interface.dump') data = { interface: [{ interface:'lan',up:true,l3_device:'br-lan',proto:'static','ipv4-address':[{address:'192.0.2.1'}] }, { interface: 'wan', up: !fixture.down, l3_device: fixture.wanDevice, proto: 'dhcp', 'ipv4-address': [{address:'192.0.2.2'}] }] };
     else if (key === 'network.device.status') data = { statistics: { rx_bytes: Math.floor(Date.now() / 1000 * 10300000), tx_bytes: Math.floor(Date.now() / 1000 * 1600000) } };
-    else if (key === 'luci-rpc.getNetworkDevices') data = Object.fromEntries(['wan','lan1','lan2','lan3'].map(n => [n, { link: { carrier: n === 'wan' || n === 'lan3', speed: 1000 } }]));
+    else if (key === 'luci-rpc.getNetworkDevices') data = {...Object.fromEntries(['wan','lan1','lan2','lan3'].map(n => [n, { link: { carrier: n === 'wan' || n === 'lan3', speed: 1000 } }])), 'br-lan':{ports:['lan1','lan2','lan3']}};
+    else if (key === 'luci.cr881x_wan_mode.status') data = {ok:true,mode:'single-wan',wan:'wan',wan2:'<unset>',br_lan_ports:'<unset>'};
     else if (key === 'luci-rpc.getWirelessDevices') data = { radio0: { up: true, iwinfo: { channel: 1, frequency:2412 }, interfaces: [{ config: { ssid: 'Fixture 2.4 GHz' } }] }, radio1: { up: true, iwinfo: { channel: 36, frequency:5180 }, interfaces: [{ config: { ssid: 'Fixture 5 GHz' } }] } };
     else if (key === 'luci-rpc.getDHCPLeases') data = { dhcp_leases: Array(8).fill({}), dhcp6_leases: Array(3).fill({}) };
     else if (key === 'luci.getMountPoints') data = { result: [{ mount: '/overlay', size:64 * 1048576, free: 30 * 1048576, avail: 29 * 1048576 }] };
@@ -113,14 +116,24 @@ const server = http.createServer((req, res) => {
    window.menu = instantiate(new Function('baseclass','ui',sources.menu)(baseclass,ui));
    const metrics = instantiate(new Function('baseclass',sources.metrics)(baseclass));
    const Scheduler = instantiate(new Function('baseclass',sources.scheduler)(baseclass));
-   window.dashboard = instantiate(new Function('view','rpc','metrics','Scheduler',sources.dashboard)(view,rpc,metrics,Scheduler));
+   window.dashboard = instantiate(new Function('view','rpc','ui','metrics','Scheduler',sources.dashboard)(view,rpc,ui,metrics,Scheduler));
    document.querySelector('#view').append(dashboard.render(await dashboard.load()));
    document.dispatchEvent(new Event('luci-loaded'));
    await dashboard.scheduler.refresh();
   }, sources);
   assert.equal(await page.getByRole('heading',{name:'Overview',exact:true}).count(),0);
   assert.equal(await page.locator('.zc-dashboard-host-footer .zc-dashboard-controls').count(),1);
+  assert.equal(await page.locator('.zcop-main .zcop-branding-footer').count(),0,'branding footer remains inside the frame');
+  assert.equal(await page.locator('.zcop-page-footer .zc-dashboard-controls').count(),1,'dashboard controls left their page footer');
+  assert.equal(await page.locator('.zcop-branding-footer .zc-dashboard-controls').count(),0,'refresh controls entered external branding');
+  assert.equal(await page.getByLabel('Refresh interval').evaluate(e=>!!e.closest('.zcop-main')),true,'refresh interval escaped main frame');
   assert.match(await page.locator('.zc-specs').innerText(),/ARMv8 - 2 cores - 1\.20 GHz max/);
+  assert.deepEqual(await page.locator('.zc-port-role').allTextContents(),['WAN1','LAN1','LAN2','LAN3']);
+  assert.equal(await page.locator('.zc-port strong').count(),4,'ports should have one current-role label each');
+  assert.equal(await page.locator('.zc-port small').count(),0,'duplicate physical/role label remains');
+  assert.equal(await page.locator('a.zc-port').count(),4);
+  assert.equal(await page.locator('.zc-port[data-port="wan"]').getAttribute('href'),'/cgi-bin/luci/admin/network/cr881x-wan-mode');
+  assert.notEqual(await page.locator('[data-port="wan"]').evaluate(e=>getComputedStyle(e).color),await page.locator('[data-port="lan1"]').evaluate(e=>getComputedStyle(e).color),'settings link color overrode physical carrier state');
   const pendingCPU = await page.locator('.zc-cpu').boundingBox();
   const pendingRAM = await page.locator('.zc-memory').boundingBox();
   assert.match(await page.locator('.zc-cpu').innerText(), /Waiting for the next CPU sample/);
@@ -138,6 +151,13 @@ const server = http.createServer((req, res) => {
   await page.evaluate(()=>{tree.children.admin.children.status.children.zcop_devices.satisfied=false;renderMenu(['admin','status','zcop_dashboard']);});
   assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['Dashboard'],'denied Devices entry exposed');
   await page.evaluate(()=>delete tree.children.admin.children.status.children.zcop_devices);
+  await page.evaluate(()=>{tree.children.admin.children.status.children.zcop_wireless={title:'Wireless',order:2,satisfied:true,children:{}};renderMenu(['admin','status','zcop_wireless']);});
+  assert.match(await page.locator('.zcop-navitem.active').innerText(),/Overview$/);
+  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['Dashboard','Wireless']);
+  assert.equal(await page.locator('#tabmenu a[aria-current=page]').textContent(),'Wireless');
+  await page.evaluate(()=>{tree.children.admin.children.status.children.zcop_wireless.satisfied=false;renderMenu(['admin','status','zcop_dashboard']);});
+  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['Dashboard'],'denied Wireless entry exposed');
+  await page.evaluate(()=>delete tree.children.admin.children.status.children.zcop_wireless);
   assert.equal(await page.locator('.zcop-command .zcop-password-notice').count(),1);
   assert.equal(await page.locator('.zcop-content .zcop-password-notice').count(),0);
   assert.match(await page.locator('.zcop-password-notice').getAttribute('href'),/admin\/system\/admin$/);
@@ -181,6 +201,10 @@ const server = http.createServer((req, res) => {
   assert.deepEqual(await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]),historyBefore,'redrawing duplicates resource samples');
   const oncePaths=['/proc/cpuinfo','/sys/devices/system/cpu/present','/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq'];
   for(const target of oncePaths) assert.equal(await page.evaluate(target=>fixture.calls.filter(c=>c.key==='file.read'&&c.args[0]===target).length,target),1,'processor data was polled repeatedly');
+  assert.equal(await page.evaluate(()=>{
+   const calls=fixture.calls.filter(c=>c.key==='luci.cr881x_wan_mode.status');
+   return calls.length>1&&calls.slice(1).every((c,i)=>c.time-calls[i].time>=15000);
+  }),true,'port setup was polled faster than the device snapshot cadence');
   const tabGeometry = await page.getByRole('link', { name: 'Dashboard', exact: true }).evaluate(e => ({ link: e.getBoundingClientRect().height, row: e.parentElement.getBoundingClientRect().height }));
   assert.ok(tabGeometry.row >= tabGeometry.link, 'menu link is vertically clipped');
   for (const mode of ['light','dark','luxury']) {
@@ -278,6 +302,42 @@ const server = http.createServer((req, res) => {
   assert.equal((await page.locator('.zc-cpu').boundingBox()).height,pendingCPU.height,'CPU section collapsed on failure');
   assert.equal((await page.locator('.zc-memory').boundingBox()).height,pendingRAM.height,'RAM section collapsed on failure');
   await page.evaluate(async () => { fixture.fail = false; dashboard.due = {}; await dashboard.scheduler.refresh(); });
+  // A physical WAN socket can be LAN; role updates must not change socket
+  // identity or carrier. All mode changes here are synthetic, never applied.
+  await page.evaluate(async () => {
+   fixture.overrides={
+    'luci.cr881x_wan_mode.status':{ok:true,wan:'<unset>',wan2:'<unset>',br_lan_ports:'<unset>'},
+    'luci-rpc.getNetworkDevices':{wan:{link:{carrier:true,speed:1000}},lan1:{link:{carrier:false}},lan2:{},lan3:{},'br-lan':{ports:['wan','lan1','lan2','lan3']}}
+   };
+   dashboard.due={};await dashboard.scheduler.refresh();
+  });
+  assert.deepEqual(await page.locator('.zc-port-role').allTextContents(),['LAN4','LAN1','LAN2','LAN3']);
+  assert.equal(await page.locator('[data-port="wan"] strong').innerText(),'LAN4');
+  assert.match(await page.locator('[data-port="wan"]').innerText(),/1000 Mbps/);
+  await page.evaluate(async () => {
+   fixture.overrides['luci.cr881x_wan_mode.status']={ok:true,wan:'lan1',wan2:'lan2',br_lan_ports:'<unset>'};
+   fixture.overrides['luci-rpc.getNetworkDevices']['br-lan'].ports=['wan','lan3'];
+   dashboard.due={};await dashboard.scheduler.refresh();
+  });
+  assert.deepEqual(await page.locator('.zc-port-role').allTextContents(),['LAN4','WAN1','WAN2','LAN3']);
+  assert.match(await page.locator('[data-port="lan1"]').innerText(),/No link/,'role was confused with carrier');
+  await page.evaluate(async () => {
+   fixture.overrides['luci.cr881x_wan_mode.status'].wan='lan3.35';
+   dashboard.due={};await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('[data-port="lan3"] .zc-port-role').innerText(),'Shared');
+  assert.match(await page.locator('[data-port="lan3"]').getAttribute('title'),/LAN3 \/ WAN1/);
+  await page.evaluate(async () => {
+   fixture.overrides['luci.cr881x_wan_mode.status'].wan='lan3';
+   dashboard.due={};await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('[data-port="lan3"] .zc-port-role').innerText(),'Conflict');
+  await page.evaluate(async () => {fixture.portModeFailure=true;dashboard.due={};await dashboard.scheduler.refresh();});
+  assert.deepEqual(await page.locator('.zc-port-role').allTextContents(),['Unknown','Unknown','Unknown','Unknown'],'stale port assignment survived app failure');
+  assert.match(await page.locator('.zc-refresh-status').innerText(),/^Updated/,'optional app failure broke the collector');
+  assert.match(await page.locator('[data-port="wan"]').innerText(),/1000 Mbps/);
+  await page.evaluate(async () => {fixture.portModeFailure=false;fixture.overrides={};dashboard.due={};await dashboard.scheduler.refresh();});
+  assert.deepEqual(await page.locator('.zc-port-role').allTextContents(),['WAN1','LAN1','LAN2','LAN3']);
   // Unsupported values must stay unknown; known empty lists and zero flows
   // must remain valid zeros. Physical link and Internet reachability differ.
   await page.evaluate(async () => {
@@ -291,8 +351,8 @@ const server = http.createServer((req, res) => {
    dashboard.due = {}; await dashboard.scheduler.refresh();
   });
   assert.equal(await page.locator('.zc-connection .zc-state').innerText(), 'Unavailable');
-  assert.match(await page.locator('.zc-port').filter({hasText:'WAN'}).innerText(), /Unavailable/);
-  assert.match(await page.locator('.zc-port').filter({hasText:'LAN1'}).innerText(), /No link/);
+  assert.match(await page.locator('.zc-port[data-port="wan"]').innerText(), /Unavailable/);
+  assert.match(await page.locator('.zc-port[data-port="lan1"]').innerText(), /No link/);
   assert.match(await page.locator('.zc-radio').first().innerText(), /Unavailable/);
   assert.match(await page.locator('.zc-radio').last().innerText(), /Disabled/);
   assert.equal(await page.locator('.zc-network-footer .zc-datum strong').allTextContents().then(v=>v.join(',')), '—,—');
@@ -404,11 +464,16 @@ const server = http.createServer((req, res) => {
    await page.setViewportSize({ width,height });
    await page.locator('.zcop-content').evaluate(e => { e.scrollTop = 0; });
    const before = await page.locator('.zcop-command').boundingBox();
+   const footerBefore=await page.locator('.zcop-layout>.zcop-branding-footer').boundingBox();
+   const frameBefore=await page.locator('.zcop-main').boundingBox();
+   assert.ok(footerBefore.y>=frameBefore.y+frameBefore.height,'footer overlaps frame at '+width);
+   assert.ok(footerBefore.y+footerBefore.height<=height,'footer outside viewport at '+width);
    const sidebarBefore = width > 720 ? await page.locator('.zcop-sidebar').boundingBox() : null;
    await page.locator('#fixture-save').evaluate(e => e.blur());
    await page.locator('#fixture-save').focus();
    const after = await page.locator('.zcop-command').boundingBox();
    assert.equal(after.y, before.y, 'section menu moved at ' + width);
+   assert.deepEqual(await page.locator('.zcop-layout>.zcop-branding-footer').boundingBox(),footerBefore,'footer moved with scroll at '+width);
    assert.ok((await page.locator('.zcop-password-notice').boundingBox()).y<after.y+after.height,'notice moved with content');
    if (sidebarBefore) assert.equal((await page.locator('.zcop-sidebar').boundingBox()).y, sidebarBefore.y, 'sidebar moved');
    assert.ok(await page.locator('.zcop-content').evaluate(e => e.scrollTop > 0), 'frame did not scroll at ' + width);
@@ -417,6 +482,14 @@ const server = http.createServer((req, res) => {
    const button = await page.locator('#fixture-save').boundingBox();
    assert.ok(button.y >= after.y + after.height && button.y + button.height <= height, 'final action clipped');
   }
+  // A zero-gap content viewport must never paint over the fixed tab underline.
+  await page.evaluate(()=>{window.previousPage=document.body.dataset.page;document.body.dataset.page='admin-status-zcop_dashboard';document.querySelector('#long-form-fixture').style.background='var(--zc-inset)';});
+  for(const width of [1920,768,390]){
+   await page.setViewportSize({width,height:700});await page.locator('.zcop-content').evaluate(e=>e.scrollTop=200);
+   const highlight=await page.evaluate(()=>{const a=document.querySelector('#tabmenu a[aria-current=page]'),r=a.getBoundingClientRect(),p=document.querySelector('.zcop-content').getBoundingClientRect();return {visible:a.contains(document.elementFromPoint(r.x+r.width/2,r.bottom-1)),frameTop:p.top,tabBottom:r.bottom};});
+   assert.equal(highlight.visible,true,'scroll content covers selected-tab underline at '+width);assert.ok(highlight.frameTop>=highlight.tabBottom-.1,'scroll viewport overlaps menu at '+width);
+  }
+  await page.evaluate(()=>{if(previousPage)document.body.dataset.page=previousPage;else delete document.body.dataset.page;});
   await page.evaluate(() => document.querySelector('#long-form-fixture').remove());
   // Switching content and menu groups must not let intrinsic page widths
   // resize the shell. Wide third-party tables scroll in the content frame.
@@ -459,6 +532,32 @@ const server = http.createServer((req, res) => {
     }
    }
   }
+  // Native forms, table actions and modal footers must not depend on HTML
+  // whitespace for separation. Split-dropdown parts remain one control.
+  await page.evaluate(() => {
+   document.querySelector('#view').innerHTML = `<section id="spacing-fixture">
+    <div class="cbi-page-actions"><a id="spacing-left" href="#">Other action</a><div id="spacing-split" class="cbi-dropdown btn cbi-button cbi-button-apply"><ul><li display="0">Save &amp; Apply</li></ul><span class="open">▾</span></div><button class="cbi-button cbi-button-save">Save</button><button class="cbi-button cbi-button-reset">Reset</button></div>
+    <table class="table"><tr class="tr"><td class="td cbi-section-actions"><div id="spacing-table"><button class="cbi-button">Restart</button><button class="cbi-button">Stop</button><button class="cbi-button">Edit</button><button class="cbi-button">Delete</button></div></td></tr></table>
+    <p><span id="spacing-sync" class="control-group"><button class="cbi-button">Sync browser</button><button class="cbi-button">Sync NTP</button></span></p>
+    <div class="cbi-dynlist"><div id="spacing-list" class="add-item control-group"><input type="text" aria-label="List value"><div class="btn cbi-button cbi-button-add">+</div></div></div>
+    <div id="spacing-inline" class="cbi-value-field"><input type="text" aria-label="Inline value"><button class="cbi-button">Choose</button></div>
+    <div id="spacing-diag" class="td"><input type="text" aria-label="Host"><span class="diag-action"><button class="cbi-button">Ping</button></span></div>
+    <div id="spacing-modal" class="right"><button class="btn">Cancel</button><button class="cbi-button cbi-button-positive">Save for review</button></div>
+   </section>`;
+  });
+  for(const width of [390,768,1536]){
+   await page.setViewportSize({width,height:940});
+   const gaps=await page.evaluate(()=>['.cbi-page-actions','#spacing-table','#spacing-sync','#spacing-list','#spacing-inline','#spacing-diag','#spacing-modal'].flatMap(selector=>{
+    const children=[...document.querySelector(selector).children].filter(e=>e.getBoundingClientRect().width);
+    return children.slice(1).map((child,i)=>{const a=children[i].getBoundingClientRect(),b=child.getBoundingClientRect();return {selector,gap:b.top>=a.bottom?b.top-a.bottom:b.left>=a.right?b.left-a.right:a.left-b.right};});
+   }));
+   assert.ok(gaps.every(g=>g.gap>=7.9),'touching controls at '+width+': '+JSON.stringify(gaps));
+   assert.ok(gaps.filter(g=>!['.cbi-page-actions','#spacing-diag'].includes(g.selector)).every(g=>g.gap<=8.1),'spacing doubled: '+JSON.stringify(gaps));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'controls escaped shell');
+   assert.equal(await page.locator('#spacing-split .open').evaluate(e=>{const s=getComputedStyle(e);return parseFloat(s.marginLeft)/parseFloat(s.fontSize);}), .5,'split button internal spacing changed');
+   const modal=await page.locator('#spacing-modal').boundingBox(),last=await page.locator('#spacing-modal button').last().boundingBox();assert.ok(Math.abs(last.x+last.width-modal.x-modal.width)<1,'modal actions lost right alignment');
+   await page.screenshot({path:path.join(output,'controls-spacing-'+width+'.png')});
+  }
   await page.evaluate(() => {
    document.querySelector('#view').replaceChildren(...savedView);
    L.env.dispatchpath = ['admin','status','zcop_dashboard'];
@@ -469,6 +568,15 @@ const server = http.createServer((req, res) => {
   await page.setViewportSize({width:1440,height:940});
   await page.locator('.zcop-content').evaluate(e => { e.scrollTo(0,0); });
   await page.screenshot({path:path.join(output,'fixed-frame-desktop.png')});
+  const permission=await page.evaluate(async()=>{
+   tree.children.admin.children.network.children['cr881x-wan-mode'].satisfied=false;
+   const identity=await dashboard.load();
+   dashboard.wanModeUrl=identity.zcopCanConfigurePorts?L.url('admin','network','cr881x-wan-mode'):null;
+   dashboard.draw();return identity.zcopCanConfigurePorts;
+  });
+  assert.equal(permission,false);
+  assert.equal(await page.locator('a.zc-port').count(),0,'denied WAN Mode link exposed');
+  assert.equal(await page.locator('.zc-port').count(),4,'denied settings hid read-only port status');
   assert.deepEqual(errors, []);
   console.log('PASS: actual modules, ACL/deep menus, metric units, hidden/paused/manual modes, unavailable data, 3 palettes and responsive layouts');
  } finally { await browser.close(); server.close(); }

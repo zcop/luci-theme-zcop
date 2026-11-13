@@ -1,5 +1,267 @@
 # Validation
 
+## Single current-role port labels, 2026-11-13
+
+Overview app: 0.8.2-r1. Theme stays 0.1.14-r1.
+
+- Dashboard ports show one current-role label, such as WAN1, WAN2 or LAN1.
+  Physical device IDs remain backing keys/tooltip details. Existing LAN numbers
+  remain stable; the fourth socket shows LAN4 when it joins LAN, matching WAN
+  Mode's socket convention. Changing a role never renames a network device.
+- Role mapping, carrier state, refresh cadence and settings links stay intact.
+  Unit/browser checks cover single/dual WAN, all-LAN, shared/conflicting roles,
+  optional status failures and recovery. Alternate assignments use fixtures;
+  live network configuration is preserved.
+- Package build and installed-browser checks pass. The live labels are WAN1,
+  LAN1, LAN2 and LAN3, with one heading per port. Three palettes and desktop,
+  tablet and phone containment pass; WAN Mode navigation still works. Installed
+  assets match the 35732-byte package. Boot ID, configuration, ACL and other
+  apps are unchanged; no network or service restart is needed.
+
+## Dashboard port assignments, 2026-11-13
+
+Overview app: 0.8.1-r1. Theme stays 0.1.14-r1.
+
+- Physical socket names remain fixed. Role labels use WAN Mode status together
+  with the current LAN bridge membership in the existing device snapshot.
+  Carrier/speed remains independent. Permitted port links open WAN Mode without
+  applying changes; denied settings links are omitted.
+- Pure and browser checks cover all-LAN, a LAN-labelled socket assigned WAN1,
+  dual-WAN, explicit VLAN sharing, direct assignment conflicts, unknown/unresolved
+  devices, failed optional status and recovery without a page reload. Role
+  collection shares the15-second device cadence; hidden/pause behavior remains
+  covered. Read permission adds only WAN Mode's status method.
+- Read-only router preview matches WAN1 on the WAN socket and LAN roles on
+  LAN1–3, including current carrier/speed. The existing WAN Mode page opens from
+  a port link. Three palettes and desktop/tablet/phone containment pass. No live
+  port assignments are changed: alternative modes are tested with fixtures.
+- The app-only package builds successfully (35638 compressed bytes). Installed
+  asset hashes match the package; post-install browser checks pass with no
+  exceptions. Boot ID, network/device configuration and WAN Mode/QoS helpers
+  remain unchanged. Only the read-only ACL and generated LuCI cache are reloaded;
+  package scripts/hooks are suppressed and networking is not restarted.
+
+## MAC visibility and vendor lookup, 2026-11-13
+
+Overview app: 0.8.0-r1. Theme stays 0.1.14-r1.
+
+- MAC addresses are emphasized in monospace with a copy icon. Manufacturer
+  names sit below them. Manual lookup is the default; per-row and visible-page
+  actions are available. Automatic mode is browser-local and processes newly
+  displayed global MACs. Private/local addresses are labelled without a guess.
+- Pure checks cover longest-prefix matching for 24/28/36-bit assignments,
+  invalid/private/unknown addresses, bounded data, a shared in-flight download,
+  seven-day IndexedDB reuse, offline stale fallback and page-exit cancellation.
+- Synthetic Devices browser checks retain existing friendly-name/static-lease
+  staging, conflicts, read-only/hidden behavior and responsive layouts. They
+  also cover manual/automatic modes, concurrent lookups, vendor search, failure
+  and explicit retry, and downloaded names containing HTML-looking text.
+- Live preview resolves both connected devices using the public database,
+  validates CORS download without credentials/referrer/device query parameters,
+  and reloads Automatic mode from browser storage without another download.
+  Layout checks reuse the same public bytes to avoid repetitive downloads.
+  Desktop/tablet/phone and three palettes preserve the search/dropdown height
+  fix. All configuration writes are blocked during live acceptance.
+
+## Devices search-field sizing, 2026-11-13
+
+Theme version: 0.1.14-r1. Overview app stays 0.7.0-r4.
+
+- Bootstrap's search-input content-box rule made the 34px field render at
+  48px including padding/borders. The Devices toolbar now explicitly uses
+  border-box sizing and 4px vertical / 8px horizontal padding, matching the
+  source selector's 34px outer height. Desktop width allows the complete
+  existing search hint; mobile retains a full-width field.
+- The Devices browser regression suite passes. A read-only live preview checks
+  equal outer heights, room for line height/placeholder/clear affordance,
+  typed accented text and responsive containment for three palettes at 1920,
+  768 and 390 pixels. No application logic or router configuration changes.
+- Theme version increases so the corrected stylesheet receives a fresh URL.
+
+## Refresh controls with cached Dashboard code, 2026-11-13
+
+Theme version: 0.1.13-r1. Overview app stays 0.7.0-r4.
+
+- The internal page-footer host retains the historic `.zcop-footer` selector.
+  External version/theme credits use a distinct `.zcop-branding-footer` selector.
+  Cached older Dashboard modules therefore append the refresh interval and
+  Refresh/Pause controls to the internal host, while current modules use the
+  dedicated `.zcop-page-footer` selector. No relocation observer is needed.
+- The theme version increases so LuCI generates a fresh stylesheet URL; a
+  package-release-only bump keeps the same URL and can leave old CSS cached.
+- The theme browser suite runs with a legacy Dashboard selector and asserts
+  that the refresh interval remains under the main frame, with no controls in
+  external branding. Existing stationary-footer and responsive checks pass.
+
+## External branding footer, 2026-11-13
+
+Theme version: 0.1.12-r7. Overview app: 0.7.0-r4.
+
+- The firmware/version and theme-credit footer is now a sibling of the main
+  frame in a separate viewport-shell row. It stays below the frame while page
+  content scrolls and does not overlay content or native form actions.
+- Dashboard refresh controls use a dedicated page footer inside the scroll
+  frame. Other pages leave that empty host hidden. No requests, services or
+  router settings are added by this layout change.
+- Browser checks measure footer geometry before/after scrolling a long form
+  and focusing its final action at desktop and phone sizes. The footer stays
+  outside the frame and within the viewport; menus, stable frame geometry and
+  keyboard access to Save remain intact. Three palettes pass. System and
+  Wireless retain Full HD fit and responsive containment.
+- Installed-package checks cover Dashboard, Wireless, System and QoS at
+  1920, 768 and 390 pixels: all twelve footer checks stay outside the main frame,
+  remain stationary on scroll and keep final controls reachable. No browser
+  exceptions, scan or configuration writes occur. Package hashes match;
+  boot/configuration/QoS fingerprints remain unchanged.
+
+## Wireless overview, 2026-11-13
+
+Theme version: 0.1.12-r6. Dashboard/Devices/Wireless: 0.7.0-r3.
+
+- Added an ACL-filtered Overview Wireless page using existing LuCI/iwinfo
+  snapshots and explicit scan RPCs. A narrowly scoped, read-only `iw ... channels`
+  command supplies kernel channel/width restrictions. No configuration/restart
+  API or shell permission is granted. Existing Dashboard/Devices collectors are unchanged.
+- Pure checks cover signed dBm, inactive versus configured channels, missing
+  station data, survey deltas/resets, BSSID deduplication, wide occupied
+  spectrum, complete legal channel blocks and signal-weighted recommendations.
+- Synthetic browser checks cover manual/serialized scans, stale/failed/empty
+  scans, five-minute expiry without network activity, read-only access,
+  hidden/page-exit guards, safe untrusted SSID text, SVG/table output, width
+  selection, three palettes, responsive containment and Bootstrap fallback.
+  The default two-radio view with a populated graph fits at 1920x960 and above.
+- Existing theme/menu and unit checks pass. Wireless remains under Overview;
+  denied entries stay hidden and existing registered routes remain intact.
+- Live checks on CR881x cover both radios, explicit scans, graph output,
+  Full HD and three palettes across desktop/tablet/phone widths. The radio
+  configuration is currently up with no network interfaces: the page correctly
+  shows configured channels and unavailable signal/noise/airtime instead of
+  fabricated operating measurements. AP-client/RSSI and non-empty survey data
+  are verified with synthetic fixtures, not new associated hardware clients.
+- Device validation exposed stale bits in libiwinfo frequency flags. Kernel
+  channel output is used instead. Parser checks cover absent widths, disabled,
+  no-IR and radar-unavailable channels; unsafe/missing PHY identity cannot run a
+  command. The package does not modify the underlying library or LuCI core.
+- Package installation skips scripts/hooks, preserves boot and network/Wi-Fi/
+  QoS/theme/device configuration hashes, and verifies installed asset hashes.
+  Existing Dashboard, Devices and System adapter assets remain byte-identical.
+  Only RPC ACLs and generated LuCI caches are reloaded. No firmware flash,
+  radio reconfiguration, service restart of networking or auto channel apply
+  is performed.
+
+## Fixed-menu highlight protection, 2026-11-12
+
+Theme version: 0.1.12-r5. Dashboard/devices remains 0.6.0-r3.
+
+- The content viewport's negative top margin extended 4px into the command bar
+  on the pages with no heading gap. It covered the selected menu underline on
+  System and Dashboard. The viewport now begins below the bar; native-page
+  spacing and input focus insets are retained by adjusting the bar's margin.
+- Browser regression checks use opaque scroll content and test the underline's
+  hit target before/after scrolling. Live checks cover System, Dashboard and
+  Interfaces at desktop, tablet and phone widths; the selected underline remains
+  visible and stationary. Full HD System fit and Devices behavior still pass.
+- The fix changes shared theme CSS only and adds no scripts, requests or services.
+
+## Single-frame System properties, 2026-11-12
+
+Theme version: 0.1.12-r4. Dashboard/devices remains 0.6.0-r3.
+
+- System properties now shows Device, Clock, Interface, Logging, Time service
+  and Time sources in a single connected frame. Native property tabs and
+  repeated System/System Properties headings are removed from presentation.
+  Obvious helper text is suppressed; meaningful interface-binding help remains.
+- A theme-only adapter moves the existing native field rows into sections
+  within their original tab and form ancestry. It does not clone widgets or
+  import RPC/UCI modules. IDs, bindings, values, disabled states and native
+  handlers remain. Native reset/re-render is handled by an idempotent browser
+  observer, disconnected on page exit. Other pages do not load this adapter.
+- Synthetic browser checks cover original node identity and change events,
+  original tab ancestry, hidden dependencies, native-style reset/re-render,
+  idempotence, unknown future fields, disabled controls and page-exit cleanup.
+  The default form fits without scrolling at 1920×1080, 1920×960 (browser
+  chrome allowance) and 2560×1440. Narrow
+  layouts retain the fixed outer frame and scroll internally.
+- Live browser preview checks all 22 native fields before/after decoration,
+  invalid hostname feedback, NTP dependencies, empty source-section hiding and
+  native Reset. No UCI write requests are sent. Existing theme/dashboard and
+  model checks pass. The bounded third-party source-contract review timed out
+  without a verdict; acceptance rests on primary source and browser checks.
+- The built theme was installed and checked through its normal page loader,
+  with no preview overrides. Installed scripts, stylesheet and footer match
+  package hashes. Boot and configuration fingerprints are preserved, including
+  System settings; live validation/Reset sends no UCI write requests. Full HD
+  browser-height fit and all three palettes pass with no browser exceptions.
+- Full HD Interface alignment: the short preferences section now stretches
+  to the Device/Clock row boundary instead of stopping about 96px early. The
+  focused browser check measures matching top/bottom edges and retains Full HD
+  one-screen fit; smaller layouts preserve their natural stacked heights.
+- Shared vertical dividers: borders now belong to individual sections rather
+  than two-column wrappers, avoiding a half-pixel midpoint shift. Both row
+  boundaries are measured at Full HD, odd-pixel width and larger viewports;
+  Interface/Time sources and Clock/Time service align within 0.05 CSS pixels.
+
+## Shared control spacing, 2026-11-12
+
+Theme version: 0.1.11-r1. Dashboard/devices remains 0.6.0-r3.
+
+- Native table actions had 1-pixel margins on each button, control groups had
+  0.2em gaps, and input/add pairs inherited a negative joining margin. Some
+  modal and inline actions relied on text-node whitespace that is absent in
+  JavaScript-generated LuCI rows. Larger themed controls made this conspicuous.
+- The common stylesheet now provides explicit 8-pixel spacing for independent
+  actions, modal footers, table rows, field buttons and dynamic-list add pairs.
+  Action rows wrap at narrow widths; page and modal actions retain their native
+  alignment. Split-dropdown internals remain joined. No LuCI core or page logic
+  changes, extra polling or router services are needed.
+- Browser fixtures measure gaps, wrapping, fixed-frame containment, left/right
+  action alignment and unchanged split-dropdown spacing. Live read-only previews
+  cover System, Interfaces, Diagnostics, Firewall and Devices at 390/768/1536px,
+  with modal actions in all three palettes. No UCI writes are sent.
+- The theme package was built and installed on the CR881x. Installed CSS
+  matches the package; boot ID and network, wireless, firewall, DHCP, theme
+  and friendly-name configuration hashes remain unchanged. Final live checks
+  pass on those pages and widths, with no browser errors or configuration writes.
+
+## Device connection details and row actions, 2026-11-12
+
+Dashboard/app version: 0.6.0-r3. Theme remains 0.1.10-r1.
+
+- Passive FDB entries show learned paths, including multiple possible paths,
+  without classifying downstream clients as directly wired or wireless. Static,
+  local and multicast FDB entries are excluded; private transport VIDs are not
+  presented as client VLANs. Exact local AP associations supply SSID, band,
+  signal and Tx/Rx link rates. No scan or remote AP query is added.
+- Friendly labels are stored separately in the package-preserved `zcop_devices`
+  UCI config, matched by MAC/DUID rather than IP. Native row menus stage label
+  creation/edit/removal or simple IPv4 reservation changes for LuCI review.
+  Reservation edits retain alternative MACs, DUIDs, tags and other DHCP options.
+  Complex DHCP records remain on the native DHCP page. Copy actions need no
+  configuration permission.
+- Unit and browser fixtures cover AP-only/VLAN association collection, native
+  rate units, duplicate FDB paths, stale/empty association snapshots, alias
+  identity with reused IPs and IAIDs, Unicode names, source failure/read-only
+  behavior, validation, staged label removal and reservation option preservation.
+  Hidden-page polling and the one-collector rule remain covered. An open Actions
+  menu suspends refresh and redraw; popup placement/stacking keeps row actions
+  usable without moving the outer frame.
+- Both existing dashboard/theme and Devices browser suites pass. The app package
+  builds with the prepared OpenWrt toolchain. Installation preserves boot ID and
+  existing network, wireless, firewall, DHCP and theme configuration hashes; the
+  second upgrade also verifies retention of the new friendly-name config.
+- Live checks identify the two current clients through LAN2/LAN3, exercise the
+  actual LuCI dropdown/forms, reject invalid names/addresses and cancel without
+  UCI write requests. Desktop/tablet/phone screenshots have no document overflow;
+  all three palettes have clickable, unobstructed action menus and no browser
+  exceptions.
+
+Acceptance limits: local AP statistics and successful configuration staging are
+fixture-tested. The router has no active AP interface, and these checks do not
+apply a live name or DHCP reservation. Downstream mesh telemetry, per-client byte
+accounting, policy controls and Wake-on-LAN are outside this slice. The bounded
+third-party review returned no verdict (provider quota, then scoped-read denial);
+acceptance is based on primary source, fixture, build and device checks.
+
 ## Native page-action contrast, 2026-11-12
 
 Theme version:0.1.10-r1. Dashboard/devices remains0.5.0-r1.

@@ -3,38 +3,128 @@
   "description": "Read lightweight router dashboard snapshots",
   "read": {
    "ubus": {
-    "system": [ "info", "board" ],
-    "network.interface": [ "dump" ],
-    "network.device": [ "status" ],
-    "luci-rpc": [ "getNetworkDevices", "getWirelessDevices", "getDHCPLeases" ],
-    "luci": [ "getMountPoints" ],
-    "file": [ "read" ]
+    "system": [
+     "info",
+     "board"
+    ],
+    "network.interface": [
+     "dump"
+    ],
+    "network.device": [
+     "status"
+    ],
+    "luci.cr881x_wan_mode": [
+     "status"
+    ],
+    "luci-rpc": [
+     "getNetworkDevices",
+     "getWirelessDevices",
+     "getDHCPLeases"
+    ],
+    "luci": [
+     "getMountPoints"
+    ],
+    "file": [
+     "read"
+    ]
    },
    "file": {
-    "/proc/cpuinfo": [ "read" ],
-    "/sys/devices/system/cpu/present": [ "read" ],
-    "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq": [ "read" ],
-    "/proc/stat": [ "read" ],
-    "/sys/kernel/debug/ecm/ecm_nss_ipv4/accelerated_count": [ "read" ],
-    "/sys/kernel/debug/ecm/ecm_nss_ipv6/accelerated_count": [ "read" ]
+    "/proc/cpuinfo": [
+     "read"
+    ],
+    "/sys/devices/system/cpu/present": [
+     "read"
+    ],
+    "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq": [
+     "read"
+    ],
+    "/proc/stat": [
+     "read"
+    ],
+    "/sys/kernel/debug/ecm/ecm_nss_ipv4/accelerated_count": [
+     "read"
+    ],
+    "/sys/kernel/debug/ecm/ecm_nss_ipv6/accelerated_count": [
+     "read"
+    ]
    }
   }
  },
  "luci-app-zcop-devices": {
-  "description": "View known devices and stage DHCP static leases",
+  "description": "View passive device details and stage friendly names or DHCP static leases",
   "read": {
    "ubus": {
-    "luci-rpc": [ "getDHCPLeases" ],
-    "network.interface": [ "dump" ],
-    "uci": [ "get" ],
-    "file": [ "exec" ]
+    "luci-rpc": [
+     "getDHCPLeases",
+     "getWirelessDevices"
+    ],
+    "network.interface": [
+     "dump"
+    ],
+    "uci": [
+     "get"
+    ],
+    "file": [
+     "exec"
+    ],
+    "iwinfo": [
+     "assoclist"
+    ]
    },
-   "uci": [ "dhcp" ],
+   "uci": [
+    "dhcp",
+    "zcop_devices"
+   ],
    "file": {
-    "/sbin/ip -4 neigh show": [ "exec" ],
-    "/sbin/ip -6 neigh show": [ "exec" ]
+    "/sbin/ip -4 neigh show": [
+     "exec"
+    ],
+    "/sbin/ip -6 neigh show": [
+     "exec"
+    ],
+    "/usr/sbin/bridge fdb show": [
+     "exec"
+    ]
    }
   },
-  "write": { "uci": [ "dhcp" ] }
+  "write": {
+   "uci": [
+    "dhcp",
+    "zcop_devices"
+   ]
+  }
+ },
+ "luci-app-zcop-wireless": {
+  "description": "Read wireless snapshots and explicitly scan nearby networks",
+  "read": {
+   "ubus": {
+    "luci-rpc": [
+     "getWirelessDevices"
+    ],
+    "iwinfo": [
+     "info",
+     "assoclist",
+     "survey"
+    ],
+    "file": [
+     "exec"
+    ]
+   },
+   "file": {
+    "/usr/sbin/iw phy phy[0-9] channels": [
+     "exec"
+    ],
+    "/usr/sbin/iw phy phy[0-9][0-9] channels": [
+     "exec"
+    ]
+   }
+  },
+  "write": {
+   "ubus": {
+    "iwinfo": [
+     "scan"
+    ]
+   }
+  }
  }
 }

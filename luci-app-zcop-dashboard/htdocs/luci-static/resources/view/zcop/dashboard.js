@@ -1,6 +1,7 @@
 'use strict';
 'require view';
 'require rpc';
+'require ui';
 'require zcop.metrics as metrics';
 'require zcop.scheduler as Scheduler';
 
@@ -9,6 +10,7 @@ const info = rpc.declare({ object: 'system', method: 'info', expect: { '': {} },
 const board = rpc.declare({ object: 'system', method: 'board', expect: { '': {} }, reject: true });
 const interfaces = rpc.declare({ object: 'network.interface', method: 'dump', expect: { interface: [] }, reject: true });
 const devices = rpc.declare({ object: 'luci-rpc', method: 'getNetworkDevices', expect: { '': {} }, reject: true });
+const portMode = rpc.declare({ object: 'luci.cr881x_wan_mode', method: 'status', expect: { '': {} }, reject: true });
 const device = rpc.declare({ object: 'network.device', method: 'status', params: ['name'], expect: { '': {} }, reject: true });
 const wireless = rpc.declare({ object: 'luci-rpc', method: 'getWirelessDevices', expect: { '': {} }, reject: true });
 const leases = rpc.declare({ object: 'luci-rpc', method: 'getDHCPLeases', expect: { '': {} }, reject: true });
@@ -36,18 +38,20 @@ function uptime(seconds) {
 
 return view.extend({
  async load() {
-  const [identity, cpuinfo, present, maximum] = await Promise.all([
+  const [identity, cpuinfo, present, maximum, canConfigurePorts] = await Promise.all([
    L.resolveDefault(board(), {}), L.resolveDefault(read('/proc/cpuinfo'), ''),
    L.resolveDefault(read('/sys/devices/system/cpu/present'), ''),
-   L.resolveDefault(read('/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq'), '')
+   L.resolveDefault(read('/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq'), ''),
+   L.resolveDefault(ui.menu.load().then(tree => tree.children?.admin?.children?.network?.children?.['cr881x-wan-mode']?.satisfied === true), false)
   ]);
-  return Object.assign({}, identity, { zcopProcessor: metrics.processor(cpuinfo, present, maximum, identity.system) });
+  return Object.assign({}, identity, { zcopProcessor: metrics.processor(cpuinfo, present, maximum, identity.system), zcopCanConfigurePorts: canConfigurePorts });
  },
  render(identity) {
   if (!document.querySelector('#zcop-dashboard-style'))
-   document.head.append(E('link', { id: 'zcop-dashboard-style', rel: 'stylesheet', href: L.resource('zcop/dashboard.css') }));
+   document.head.append(E('link', { id: 'zcop-dashboard-style', rel: 'stylesheet', href: L.resource('zcop/dashboard.css') + '?v=0.8.2' }));
   this.identity = identity;
   this.processor = identity.zcopProcessor || {};
+  this.wanModeUrl = identity.zcopCanConfigurePorts ? L.url('admin', 'network', 'cr881x-wan-mode') : null;
   this.state = {};
   this.due = {};
   this.latestDevice = null;
@@ -79,7 +83,7 @@ return view.extend({
   const root = E('div', { 'class': 'zc-dashboard' }, [E('h2', { 'class': 'zcop-sr-only' }, _('Dashboard')), this.body]);
   this.controls = E('div', { 'class': 'zc-dashboard-controls' }, [this.status, cadence,
    E('button', { 'type': 'button', 'class': 'btn', 'click': () => this.scheduler.refresh() }, _('Refresh')), pause]);
-  const footer = document.querySelector('.zcop-footer');
+  const footer = document.querySelector('.zcop-page-footer');
   if (footer) {
    footer.classList.add('zc-dashboard-host-footer');
    footer.append(this.controls);
@@ -95,20 +99,24 @@ return view.extend({
  async collect() {
   const now = Date.now(), jobs = [], generation = this.generation;
   let required = 0, successful = 0;
+  const optional = name => name.startsWith('nss') || name === 'portMode';
   const queue = (name, period, fn) => {
    if (now < (this.due[name] || 0)) return;
    this.due[name] = now + period;
-   if (!name.startsWith('nss')) required++;
+   if (!optional(name)) required++;
    jobs.push(Promise.resolve().then(fn).then(value => {
     if (generation !== this.generation) return;
     this.state[name] = { value, time: Date.now() }; delete this.failures[name];
-    if (!name.startsWith('nss')) successful++;
+    if (!optional(name)) successful++;
    }).catch(() => { if (generation === this.generation) this.failures[name] = true; }));
   };
   queue('system', 15000, info);
   queue('cpu', 15000, () => read('/proc/stat'));
   queue('interfaces', 15000, interfaces);
   queue('devices', 15000, devices);
+  // Optional app integration, on the existing device cadence. No role changes
+  // or network writes are performed; absent/failed status remains unknown.
+  queue('portMode', 15000, portMode);
   queue('wireless', 30000, wireless);
   queue('leases', 30000, leases);
   queue('mounts', 60000, mounts);
@@ -122,7 +130,7 @@ return view.extend({
   if (generation !== this.generation || this.scheduler.stopped) return;
   if (!jobs.length) return;
   this.draw();
-  const failed = Object.keys(this.failures).filter(n => !n.startsWith('nss'));
+  const failed = Object.keys(this.failures).filter(n => !optional(n));
   this.status.textContent = failed.length ? _('Some data unavailable or stale') : _('Updated') + ' ' + new Date().toLocaleTimeString();
   if (required && !successful) throw new Error('Snapshot unavailable');
  },
@@ -242,15 +250,25 @@ return view.extend({
   ], 'interfaces-section');
   if (logical.length) interfacesSection.querySelector('h3').append(E('span', { 'class': 'zc-interface-count' },
    logical.length + ' ' + _('total') + ' · ' + logical.filter(iface => iface.up === true).length + ' ' + _('up')));
-  const links = Object.entries(current('devices') || {}).filter(([name]) => /^(lan\d+|wan\d*)$/.test(name))
+  const networkDevices = current('devices') || {};
+  const roles = metrics.portRoles(current('portMode'), networkDevices);
+  const labels = metrics.portLabels(roles);
+  const links = Object.entries(networkDevices).filter(([name]) => /^(lan\d+|wan\d*)$/.test(name))
    .sort(([a], [b]) => Number(b.startsWith('wan')) - Number(a.startsWith('wan')) || a.localeCompare(b, undefined, { numeric: true }));
   const ports = section(_('Ports & Wi-Fi'), [
    links.length ? E('div', { 'class': 'zc-ports' }, links.map(([name, data]) => {
     const up = data.link?.carrier === true, down = data.link?.carrier === false;
-    return E('div', { 'class': 'zc-port' + (up ? ' zc-port-up' : '') }, [
+    const role = roles[name], assigned = labels[name];
+    const label = { unknown: _('Unknown'), other: _('Other'), shared: _('Shared'), conflict: _('Conflict') }[role.state] || assigned;
+    const linkLabel = up ? (data.link.speed > 0 ? data.link.speed + ' Mbps' : _('Link up')) : down ? _('No link') : _('Unavailable');
+    const description = _('Physical socket') + ': ' + name.toUpperCase() + ' · ' + _('Role') + ': ' + (assigned || label)
+     + (role.state === 'conflict' ? ' · ' + _('Conflicting untagged assignments') : '')
+     + ' · ' + linkLabel + (this.wanModeUrl ? ' · ' + _('Configure in WAN Mode') : '');
+    return E(this.wanModeUrl ? 'a' : 'div', { 'class': 'zc-port' + (up ? ' zc-port-up' : ''),
+     'data-port': name, href: this.wanModeUrl, title: description, 'aria-label': description }, [
      E('span', { 'class': 'zc-port-socket', 'aria-hidden': 'true' }, [E('i'), E('i'), E('i'), E('i')]),
-     E('div', {}, [E('strong', {}, name.toUpperCase()),
-      E('span', {}, up ? (data.link.speed > 0 ? data.link.speed + ' Mbps' : _('Link up')) : down ? _('No link') : _('Unavailable'))])]);
+     E('div', {}, [E('strong', { 'class': 'zc-port-role zc-port-role-' + role.state }, [label]),
+      E('span', {}, [linkLabel])])]);
    })) : E('p', { 'class': 'zc-note' }, _('No port status available')),
    E('div', { 'class': 'zc-wireless' }, Object.entries(current('wireless') || {}).map(([name, data]) => {
     const names = (data.interfaces || []).map(iface => iface.config?.ssid).filter(Boolean);

@@ -2,13 +2,40 @@
  "admin/status/zcop_dashboard": {
   "title": "Dashboard",
   "order": 0,
-  "action": { "type": "view", "path": "zcop/dashboard" },
-  "depends": { "acl": [ "luci-app-zcop-dashboard" ] }
+  "action": {
+   "type": "view",
+   "path": "zcop/dashboard"
+  },
+  "depends": {
+   "acl": [
+    "luci-app-zcop-dashboard"
+   ]
+  }
  },
  "admin/status/zcop_devices": {
   "title": "Devices",
   "order": 1,
-  "action": { "type": "view", "path": "zcop/devices" },
-  "depends": { "acl": [ "luci-app-zcop-devices" ] }
+  "action": {
+   "type": "view",
+   "path": "zcop/devices"
+  },
+  "depends": {
+   "acl": [
+    "luci-app-zcop-devices"
+   ]
+  }
+ },
+ "admin/status/zcop_wireless": {
+  "title": "Wireless",
+  "order": 2,
+  "action": {
+   "type": "view",
+   "path": "zcop/wireless"
+  },
+  "depends": {
+   "acl": [
+    "luci-app-zcop-wireless"
+   ]
+  }
  }
 }

@@ -51,6 +51,42 @@ return baseclass.extend({
  count(text) {
   return /^\d+\s*$/.test(text || '') ? Number(text.trim()) : null;
  },
+ portRoles(status, devices) {
+  const ports = Object.keys(devices || {}).filter(name => /^(lan\d+|wan\d*)$/.test(name));
+  const split = value => typeof value === 'string' ? value.trim().split(/\s+/).filter(n => n && n !== '<unset>') : [];
+  // Physical socket names never imply a role. The live bridge is authoritative
+  // for LAN membership; the WAN Mode helper supplies configured WAN devices.
+  const bridge = devices?.['br-lan'];
+  const lan = Array.isArray(bridge?.ports) ? bridge.ports : split(status?.br_lan_ports);
+  const lanKnown = Array.isArray(bridge?.ports) || lan.length > 0;
+  const known = status?.ok === true && typeof status.wan === 'string' && typeof status.wan2 === 'string';
+  const assignments = [['lan', lan], ['wan1', split(status?.wan)], ['wan2', split(status?.wan2)]];
+  const physical = device => {
+   if (ports.includes(device)) return device;
+   // Explicit VLAN uppers can share a socket. Do not guess through PPP, bonds,
+   // tunnels or arbitrary bridge names when the physical device is unreported.
+   const match = /^(lan\d+|wan\d*)((?:\.\d{1,4}){1,2})$/.exec(device);
+   return match && ports.includes(match[1]) && match[2].slice(1).split('.').every(n => Number(n) >= 1 && Number(n) <= 4094) ? match[1] : null;
+  };
+  const unresolved = assignments.slice(1).some(([, names]) => names.some(n => !physical(n)));
+  return Object.fromEntries(ports.map(name => {
+   if (!known) return [name, { roles: [], state: 'unknown' }];
+   const roles = assignments.filter(([, names]) => names.some(n => physical(n) === name)).map(([role]) => role);
+   const direct = assignments.filter(([, names]) => names.includes(name)).length;
+   return [name, { roles, state: direct > 1 ? 'conflict' : roles.length > 1 ? 'shared'
+    : roles.length ? 'assigned' : lanKnown && !unresolved ? 'other' : 'unknown' }];
+  }));
+ },
+ portLabels(roles) {
+  const names = Object.keys(roles || {}).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  let lastLan = Math.max(0, ...names.map(name => Number(/^lan(\d+)$/.exec(name)?.[1] || 0)));
+  // Keep existing LAN numbering stable. WAN Mode also identifies the fourth
+  // socket as LAN4 when it joins LAN; labels never rename the backing device.
+  return Object.fromEntries(names.map(name => {
+   const lan = /^lan\d+$/.test(name) ? name.toUpperCase() : 'LAN' + ++lastLan;
+   return [name, roles[name].roles.map(role => role === 'lan' ? lan : role.toUpperCase()).join(' / ')];
+  }));
+ },
  wan(interfaces) {
   return interfaces.find(n => n.interface === 'wan') || interfaces.find(n =>
    (n.route || []).some(r => r.target === '0.0.0.0' || r.target === '::')) || null;
