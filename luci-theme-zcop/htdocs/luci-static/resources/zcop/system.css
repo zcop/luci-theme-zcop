@@ -1,0 +1,55 @@
+/* SPDX-License-Identifier: Apache-2.0. Native LuCI System form, one frame. */
+.zc-system-properties{container:zc-system / inline-size;margin:0}
+.zc-system-properties>h2,.zc-system-properties>.cbi-map-descr,.zc-system-properties>.cbi-section>h3,.zc-system-properties .cbi-tabmenu,.zc-system-properties .zc-system-redundant{display:none}
+.zcop-theme .zc-system-properties>.cbi-section{margin:0;padding:0;border:0}
+.zc-system-root{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.zc-system-root>[data-tab]{grid-column:1/-1;height:auto;opacity:1;overflow:visible;transition:none;padding:0}
+.zc-system-root>[data-tab=language]{grid-column:1}
+.zc-system-root>[data-tab=logging]{grid-column:2;grid-row:2}
+.zc-system-panels{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;height:100%}
+.zc-system-root>[data-tab=general]>.zc-system-panels,.zc-system-root>[data-tab=timesync]>.zc-system-panels{grid-template-columns:repeat(2,minmax(0,1fr))}
+.zc-system-pane{min-width:0;padding:18px 24px;border-bottom:1px solid var(--zc-line)}
+.zc-system-pane:not(:has(> .cbi-value:not(.hidden))){display:none}
+.zc-system-pane+.zc-system-pane{border-inline-start:1px solid var(--zc-line)}
+.zc-system-device,.zc-system-logging{background:var(--zc-inset)}
+.zc-system-properties .zc-system-pane>h3{font-size:13px;font-weight:650;line-height:1.5;margin:0 0 14px;color:var(--zc-text)}
+.zc-system-properties .cbi-value:not(.hidden){display:grid;grid-template-columns:112px minmax(0,1fr);gap:10px;align-items:center;margin:0 0 10px;min-width:0}
+.zc-system-properties .cbi-value:last-child{margin-bottom:0}
+.zcop-theme .zc-system-properties .cbi-value-title{width:auto;flex:none;padding:0;text-align:left;font-size:12px;line-height:1.4;color:var(--zc-muted);overflow-wrap:anywhere}
+.zc-system-properties .cbi-value-field{margin:0;min-width:0}
+.zcop-theme .zc-system-properties :is(input:not([type=checkbox]):not([type=hidden]),select,textarea,.cbi-dropdown:not(.btn)){width:100%;min-width:0;font-size:13px}
+.zc-system-properties .cbi-value-description{font-size:11px;line-height:1.5;margin-top:6px;color:var(--zc-muted)}
+.zcop-theme .zc-system-properties textarea{height:72px;min-height:58px;resize:vertical}
+.zc-system-properties .cbi-value[data-name=notes]{align-items:start}
+.zc-system-properties .zc-system-clock-row:not(.hidden){grid-template-columns:minmax(0,1fr);gap:0;margin-bottom:16px}
+.zc-system-properties .zc-system-clock-row>.cbi-value-title{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.zc-system-clock-row .cbi-value-field{display:flex;flex-direction:column;gap:8px}
+.zc-system-clock-row br{display:none}
+.zcop-theme .zc-system-clock-row .control-group{flex-wrap:wrap}
+.zcop-theme .zc-system-properties button{font-size:12px}
+.zc-system-properties .zc-system-divider{border-top:1px solid var(--zc-line);padding-top:12px;margin-top:12px}
+.zc-system-properties .cbi-dynlist{min-width:0;width:100%;margin:0}
+.zc-system-properties .cbi-dynlist>.item{font-size:12px;margin-bottom:6px;max-width:100%}
+.zc-system-sources .cbi-value:not(.hidden){grid-template-columns:minmax(0,1fr);gap:8px;align-items:start}
+.zc-system-sources .cbi-value-title{display:none}
+.zc-system-root>[data-tab]:not([data-tab=general]):not([data-tab=logging]):not([data-tab=timesync]):not([data-tab=language]){padding-top:16px}
+.zcop-theme[data-page=admin-system-system] .zcop-command{margin-bottom:0}
+.zcop-theme[data-page=admin-system-system] .cbi-page-actions{margin:0;padding:12px 0;border-top:0}
+.zcop-theme[data-page=admin-system-system] .zcop-footer{padding-top:12px}
+@container zc-system (min-width:1050px){
+ .zc-system-root{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .zc-system-root>[data-tab=general]{grid-column:1/span 2;grid-row:1}
+ .zc-system-root>[data-tab=language]{grid-column:3;grid-row:1;align-self:stretch}
+ .zc-system-root>[data-tab=logging]{grid-column:1;grid-row:2}
+ .zc-system-root>[data-tab=timesync]{grid-column:2/span 2;grid-row:2}
+ /* Keep borders inside the shared column tracks, not the spanning wrapper. */
+ .zc-system-root>:is([data-tab=language],[data-tab=timesync])>.zc-system-panels>.zc-system-pane:first-child{border-inline-start:1px solid var(--zc-line)}
+}
+@container zc-system (max-width:649px){
+ .zc-system-root,.zc-system-root>[data-tab=general]>.zc-system-panels,.zc-system-root>[data-tab=timesync]>.zc-system-panels{grid-template-columns:minmax(0,1fr)}
+ .zc-system-root>[data-tab=language],.zc-system-root>[data-tab=logging]{grid-column:1;grid-row:auto}
+ .zc-system-pane{padding:18px 12px}
+ .zc-system-pane+.zc-system-pane{border-inline-start:0}
+ .zc-system-properties .cbi-value:not(.hidden){grid-template-columns:106px minmax(0,1fr)}
+ .zc-system-properties .zc-system-clock-row:not(.hidden),.zc-system-sources .cbi-value:not(.hidden){grid-template-columns:minmax(0,1fr)}
+}

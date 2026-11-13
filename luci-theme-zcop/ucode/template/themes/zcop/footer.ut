@@ -1,10 +1,11 @@
 {# SPDX-License-Identifier: Apache-2.0 #}
 {% if (!blank_page): %}
-   <footer class="zcop-footer"><span>{{ version.distname }} {{ version.distversion }} · {{ version.luciname }}</span><a href="https://github.com/zcop/luci-theme-zcop" target="_blank" rel="noreferrer">Zcop theme</a></footer>
+   <div class="zcop-page-footer zcop-footer"></div>
    </div>
   </main>
+  <footer class="zcop-branding-footer"><span>{{ version.distname }} {{ version.distversion }} · {{ version.luciname }}</span><a href="https://github.com/zcop/luci-theme-zcop" target="_blank" rel="noreferrer">Zcop theme</a></footer>
  </div>
- <script>L.require('menu-zcop');</script>
+ <script>L.require('menu-zcop'); if (document.body.dataset.page === 'admin-system-system') L.require('zcop.system');</script>
 {% endif %}
 </body>
 </html>

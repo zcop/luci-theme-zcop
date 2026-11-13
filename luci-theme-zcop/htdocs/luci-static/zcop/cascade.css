@@ -20,7 +20,7 @@ body.zcop-theme{margin:0;padding:0;background:var(--zc-canvas);color:var(--zc-te
 .zcop-join:after{bottom:calc(-1 * var(--zc-join));background:radial-gradient(circle at bottom left,transparent calc(var(--zc-join) - 1px),var(--zc-line) calc(var(--zc-join) - .5px),var(--zc-line) var(--zc-join),var(--zc-surface) calc(var(--zc-join) + .5px))}
 .zcop-sidebar-bottom{margin-top:auto;padding:50px 18px 0 12px}.zcop-palettes{display:flex;gap:3px;max-width:100%;width:max-content;padding:4px;border:1px solid var(--zc-line);background:var(--zc-inset);border-radius:10px}.zcop-palettes button{border:0;border-radius:7px;padding:6px 8px;background:transparent;color:var(--zc-muted);font-size:12px;cursor:pointer}.zcop-palettes button[aria-pressed=true]{background:var(--zc-surface);color:var(--zc-text);box-shadow:0 1px 3px #0002}.zcop-logout{display:inline-block;color:var(--zc-muted)!important;font-size:12px;margin:14px 8px 0}
 .zcop-main{min-width:0;display:flex;flex-direction:column;position:relative;background:var(--zc-surface);border:1px solid var(--zc-line);border-radius:22px;padding:20px 30px 24px}
-.zcop-command{display:flex;align-items:center;gap:12px;min-width:0;min-height:54px;border-bottom:1px solid var(--zc-line);margin-bottom:24px}.zcop-command #tabmenu{min-width:0;flex:1}.zcop-command #indicators{flex-shrink:0}
+.zcop-command{display:flex;align-items:center;gap:12px;min-width:0;min-height:54px;border-bottom:1px solid var(--zc-line);margin-bottom:20px}.zcop-command #tabmenu{min-width:0;flex:1}.zcop-command #indicators{flex-shrink:0}
 .zcop-page-tabs{display:flex;gap:24px;list-style:none;overflow:auto;white-space:nowrap;border:0!important;padding:0!important;margin:0!important;max-width:100%;scrollbar-width:thin}.zcop-page-tabs>li{display:block;float:none!important;flex-shrink:0;margin:0!important;border:0!important;background:transparent!important;border-radius:0!important;padding:0!important}.zcop-page-tabs>li>a{display:block;padding:15px 0!important;color:var(--zc-muted)!important;border:0!important;background:transparent!important}.zcop-page-tabs>li.active>a{color:var(--zc-accent)!important;border-bottom:2px solid var(--zc-accent)!important;font-weight:600}.zcop-page-tabs+.zcop-page-tabs{gap:20px;border-top:1px solid var(--zc-line)!important;font-size:12px}.zcop-page-tabs+.zcop-page-tabs>li>a{padding:8px 0!important}
 .zcop-content{min-width:0;flex:1}.zcop-content h2{font-size:20px;color:var(--zc-text);margin-top:0}.zcop-content h3{font-size:16px;color:var(--zc-text)}.zcop-content .cbi-map,.zcop-content .cbi-section{color:var(--zc-text);min-width:0}.zcop-content .cbi-section{background:transparent;border-color:var(--zc-line)}
 .zcop-theme .cbi-input-text,.zcop-theme input[type=text],.zcop-theme input[type=password],.zcop-theme input[type=number],.zcop-theme select,.zcop-theme textarea,.zcop-theme .cbi-dropdown{background:var(--zc-surface);color:var(--zc-text);border:1px solid var(--zc-line);border-radius:8px;box-shadow:none}
@@ -32,7 +32,7 @@ body.zcop-theme{margin:0;padding:0;background:var(--zc-canvas);color:var(--zc-te
 .zcop-page-tabs{background:none!important;flex-wrap:nowrap!important}.zcop-page-tabs>li{height:auto!important;max-width:none!important;align-items:stretch}.zcop-page-tabs>li>a{line-height:20px!important;overflow:visible!important}.zcop-footer{margin:0;border:0;background:transparent}.zcop-theme #view{min-width:0}
 @media(min-width:1650px){.zcop-layout{margin:32px auto;min-height:calc(100dvh - 64px)}}
 @media(max-width:1100px){.zcop-layout{grid-template-columns:190px minmax(0,1fr);padding:0 12px}.zcop-main{padding:16px 20px 20px}.zcop-navitem{padding-left:12px;gap:8px}.zcop-page-tabs{gap:18px}.zcop-palettes button{padding:6px}}
-@media(max-width:720px){.zcop-layout{display:block;margin:0;padding:10px;min-height:100dvh}.zcop-sidebar{display:none}.zcop-main{min-height:calc(100dvh - 20px);padding:10px 16px 18px;border-radius:16px}.zcop-menu-toggle{display:block;border:0;background:transparent;color:var(--zc-text);padding:4px;font-size:20px;cursor:pointer}.zcop-menu-open .zcop-sidebar{display:flex;padding:16px 0 20px}.zcop-brand{padding-bottom:24px}.zcop-menu-open .zcop-navitem{border-radius:10px;width:100%;border-right-color:var(--zc-line)}.zcop-menu-open .zcop-join{display:none}.zcop-sidebar-bottom{padding-top:24px}.zcop-command{margin-bottom:20px;gap:10px}.zcop-page-tabs{gap:20px}.zcop-page-tabs>li>a{font-size:13px}.zcop-footer{flex-direction:column;gap:6px}.zcop-theme .cbi-value-title{float:none;width:auto;text-align:left}.zcop-theme .cbi-value-field{margin-left:0}.zcop-content .table{max-width:100%}}
+@media(max-width:720px){.zcop-layout{display:block;margin:0;padding:10px;min-height:100dvh}.zcop-sidebar{display:none}.zcop-main{min-height:calc(100dvh - 20px);padding:10px 16px 18px;border-radius:16px}.zcop-menu-toggle{display:block;border:0;background:transparent;color:var(--zc-text);padding:4px;font-size:20px;cursor:pointer}.zcop-menu-open .zcop-sidebar{display:flex;padding:16px 0 20px}.zcop-brand{padding-bottom:24px}.zcop-menu-open .zcop-navitem{border-radius:10px;width:100%;border-right-color:var(--zc-line)}.zcop-menu-open .zcop-join{display:none}.zcop-sidebar-bottom{padding-top:24px}.zcop-command{margin-bottom:16px;gap:10px}.zcop-page-tabs{gap:20px}.zcop-page-tabs>li>a{font-size:13px}.zcop-footer{flex-direction:column;gap:6px}.zcop-theme .cbi-value-title{float:none;width:auto;text-align:left}.zcop-theme .cbi-value-field{margin-left:0}.zcop-content .table{max-width:100%}}
 @media(prefers-reduced-motion:reduce){.zcop-theme *{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
 
 /* Explicit width above prevents Bootstrap's column-flex body and auto margins
@@ -50,7 +50,10 @@ body.zcop-theme:not(.zcop-login){height:100vh;height:100dvh;overflow:hidden}
 .zcop-password-notice svg{flex-shrink:0;color:var(--zc-upload)}
 a.zcop-password-notice:hover>span{text-decoration:underline}
 @media(max-width:720px){.zcop-password-notice{font-size:11px;max-width:130px;gap:5px}}
-.zcop-content{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:4px;margin:-4px}
+.zcop-content{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:4px;margin:0 -4px -4px}
+/* Zero-gap pages start below the bar; the scroll viewport must not overlap
+ * the selected-tab border. Other pages keep their existing field inset. */
+.zcop-theme:is([data-page="admin-status-zcop_dashboard"],[data-page="admin-system-system"]) .zcop-content{padding-top:0}
 .zcop-main>.alert-message{flex-shrink:0;max-height:25%;overflow:auto}
 /* Dashboard panes meet the command-bar divider; there is no page-heading row. */
 .zcop-theme[data-page="admin-status-zcop_dashboard"] .zcop-command{margin-bottom:0}
@@ -97,6 +100,35 @@ a.zcop-password-notice:hover>span{text-decoration:underline}
 .zcop-theme input[type=file]::file-selector-button{font:inherit;padding:6px 10px;margin-inline-end:8px;background:var(--zc-inset);color:var(--zc-text);border:1px solid var(--zc-line);border-radius:6px}
 .zcop-footer{--zc-control-size:28px;--zc-control-y:4px;--zc-control-x:8px}
 
+/* LuCI builds many action rows without text-node spacing. Keep independent
+ * controls apart at the row level; split-button internals stay untouched. */
+.zcop-theme{--zc-control-gap:8px}
+.zcop-theme :where(.zcop-content,.modal) :where(button,.btn,.cbi-button,input[type=button],input[type=submit]) + :where(button,.btn,.cbi-button,input[type=button],input[type=submit]),
+.zcop-theme :where(.cbi-value-field,.td,td) > :where(input:not([type=hidden]),select,textarea) + :where(button,.btn,.cbi-button,.diag-action){margin-inline-start:var(--zc-control-gap)}
+.zcop-theme :is(.control-group,.cbi-page-actions,.actions),
+.zcop-theme .td.cbi-section-actions > div:not(.cbi-dropdown),
+.zcop-theme .td.cbi-section-actions > div:not(.cbi-dropdown) > form,
+.zcop-theme :is(.zcop-content,.modal) .right:has(> :is(button,.btn,.cbi-button,input[type=submit],input[type=button])){
+ display:flex;flex-wrap:wrap;align-items:center;gap:var(--zc-control-gap)
+}
+.zcop-theme .td.cbi-section-actions > div:not(.cbi-dropdown){flex-wrap:nowrap;justify-content:flex-end}
+@media(max-width:720px){.zcop-theme .td.cbi-section-actions > div:not(.cbi-dropdown){flex-wrap:wrap}}
+.zcop-theme .td > input + .diag-action{display:inline-flex;margin-inline-start:0;margin-block-start:var(--zc-control-gap);vertical-align:top}
+.zcop-theme .control-group{display:inline-flex;max-width:100%;vertical-align:middle}
+.zcop-theme :is(.cbi-page-actions,.actions),
+.zcop-theme :is(.zcop-content,.modal) .right:has(> :is(button,.btn,.cbi-button,input[type=submit],input[type=button])){justify-content:flex-end}
+.zcop-theme :is(.control-group,.cbi-page-actions,.actions) > *,
+.zcop-theme .td.cbi-section-actions > div:not(.cbi-dropdown) > *,
+.zcop-theme .td.cbi-section-actions > div:not(.cbi-dropdown) > form > *,
+.zcop-theme :is(.zcop-content,.modal) .right:has(> :is(button,.btn,.cbi-button,input[type=submit],input[type=button])) > *{margin:0;float:none}
+.zcop-theme .control-group > :is(input,select) + :is(.btn,.cbi-button,button){margin-inline-start:0;border-radius:7px}
+.zcop-theme .cbi-dynlist > .add-item.control-group{flex-wrap:nowrap}
+.zcop-theme .cbi-dynlist > .add-item.control-group > :is(input,select,.cbi-dropdown){min-width:0;flex:1 1 auto}
+.zcop-theme .cbi-dynlist > .add-item.control-group > .cbi-button{flex:0 0 auto}
+.zcop-theme .cbi-page-actions::after{display:none}
+/* Retain native secondary/left actions when a page provides them. */
+.zcop-theme .cbi-page-actions > :not([method="post"]):not(.cbi-button-apply):not(.cbi-button-negative):not(.cbi-button-save):not(.cbi-button-reset){margin-inline-end:auto}
+
 /* Enhance native desktop selects without replacing their value/events or
  * keyboard behavior. Unsupported browsers keep the ordinary native picker. */
 @supports (appearance:base-select){
@@ -108,3 +140,26 @@ a.zcop-password-notice:hover>span{text-decoration:underline}
   .zcop-theme select option:is(:hover,:focus,:checked){background:var(--zc-soft);color:var(--zc-text)}
  }
 }
+
+/* Keep the historic .zcop-footer selector on the internal control host so
+ * cached Dashboard modules cannot append controls to external branding. */
+.zcop-branding-footer{margin:0;border:0;background:transparent;color:var(--zc-muted);font-size:11px}
+.zcop-branding-footer a{color:var(--zc-muted)}
+
+/* Branding occupies a separate row of the viewport shell, outside the frame.
+ * Only page content scrolls; the footer keeps its position without overlaying it. */
+.zcop-layout{grid-template-rows:minmax(0,1fr) auto;row-gap:10px}
+.zcop-sidebar{grid-column:1;grid-row:1}
+.zcop-main{grid-column:2;grid-row:1}
+.zcop-layout>.zcop-branding-footer{grid-column:2;grid-row:2;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px 16px;min-width:0;min-height:16px;padding:0 30px;line-height:16px;flex-shrink:0}
+.zcop-layout>.zcop-branding-footer>span{min-width:0;overflow-wrap:anywhere}
+.zcop-layout>.zcop-branding-footer>a{flex-shrink:0;white-space:nowrap}
+.zcop-page-footer:empty{display:none}
+.zcop-page-footer:not(:empty){display:flex;align-items:center;justify-content:flex-end;padding-top:18px;font-size:11px;color:var(--zc-muted)}
+@media(max-width:1100px){.zcop-layout>.zcop-branding-footer{padding:0 20px}}
+@media(max-width:720px){.zcop-layout{row-gap:8px}.zcop-layout>.zcop-branding-footer{padding:0 6px;font-size:10px}.zcop-page-footer:not(:empty){padding-top:14px}}
+
+/* Bootstrap gives search inputs content-box sizing. Keep the Devices search
+ * aligned with its source selector and leave room for the full search hint. */
+.zcop-theme .zc-devices-toolbar input[type=search]{box-sizing:border-box;min-width:0;width:290px;height:var(--zc-control-size);padding:4px 8px;line-height:1.4}
+@media(max-width:720px){.zcop-theme .zc-devices-toolbar input[type=search]{width:100%}}
