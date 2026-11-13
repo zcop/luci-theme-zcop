@@ -88,7 +88,23 @@ return baseclass.extend({
   }));
  },
  wan(interfaces) {
-  return interfaces.find(n => n.interface === 'wan') || interfaces.find(n =>
-   (n.route || []).some(r => r.target === '0.0.0.0' || r.target === '::')) || null;
+  // Follow the live uplink rather than a configured socket name. IPv4 and
+  // IPv6 metrics are separate; prefer IPv4, then the lowest metric in-family.
+  let uplink = null, family = 2, metric = Infinity;
+  for (const iface of interfaces) {
+   if (iface.up !== true) continue;
+   for (const route of iface.route || []) {
+    if (Number(route.mask ?? 0) !== 0) continue;
+    const nextFamily = route.target === '0.0.0.0' ? 0 : route.target === '::' ? 1 : 2;
+    const nextMetric = Number(route.metric ?? iface.metric ?? 0);
+    if (nextFamily === 2 || !Number.isFinite(nextMetric) || nextMetric < 0) continue;
+    if (!uplink || nextFamily < family || nextFamily === family &&
+     (nextMetric < metric || nextMetric === metric && iface.interface === 'wan' && uplink.interface !== 'wan')) {
+     uplink = iface; family = nextFamily; metric = nextMetric;
+    }
+   }
+  }
+  // Preserve configured-WAN status/errors when no active default is reported.
+  return uplink || interfaces.find(iface => iface.interface === 'wan') || null;
  }
 });

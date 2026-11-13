@@ -259,6 +259,10 @@ Source: [Wireshark manufacturer database](https://www.wireshark.org/download/aut
   request can finish. Failures back off; manual refresh is available.
 - At most 60 numeric samples per WAN, CPU and RAM history in the browser. No RRD, collectd, database,
   router-side history, packet capture, flow dump, Wi-Fi scan or Internet probe.
+- Network activity follows the up interface carrying the lowest-metric IPv4 default route,
+  falling back to IPv6 defaults. Wi-Fi clients, PPPoE, bridges and named tunnel
+  uplinks use their reported L3 device; a down configured `wan` does not hide
+  an active `wwan`. Switching devices clears the previous rate/history baseline.
 - WAN rates use reported interface counters. The chart-caption tooltip retains
   the unverified NSS-accounting limitation; complete accelerated accounting
   still requires validation on the target.

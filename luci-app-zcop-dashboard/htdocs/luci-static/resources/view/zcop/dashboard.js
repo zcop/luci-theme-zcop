@@ -48,7 +48,7 @@ return view.extend({
  },
  render(identity) {
   if (!document.querySelector('#zcop-dashboard-style'))
-   document.head.append(E('link', { id: 'zcop-dashboard-style', rel: 'stylesheet', href: L.resource('zcop/dashboard.css') + '?v=0.8.2' }));
+   document.head.append(E('link', { id: 'zcop-dashboard-style', rel: 'stylesheet', href: L.resource('zcop/dashboard.css') + '?v=0.8.3' }));
   this.identity = identity;
   this.processor = identity.zcopProcessor || {};
   this.wanModeUrl = identity.zcopCanConfigurePorts ? L.url('admin', 'network', 'cr881x-wan-mode') : null;

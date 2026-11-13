@@ -398,6 +398,40 @@ const server = http.createServer((req, res) => {
   assert.equal(await page.locator('.zc-chart').count(), 1, 'valid idle samples lost their chart');
   assert.equal(await page.locator('.zc-traffic-empty').count(), 0, 'valid idle zero mislabeled as missing');
   await page.evaluate(async () => {fixture.overrides={}; dashboard.due={}; await dashboard.scheduler.refresh();});
+  // A Wi-Fi client uplink must supply both the status and traffic graph,
+  // even with a configured/down WAN socket or a higher-metric wired backup.
+  await page.evaluate(async () => {
+   fixture.overrides = {'network.interface.dump':{interface:[
+    {interface:'wan',up:false,proto:'dhcp',l3_device:'wan',metric:100},
+    {interface:'wwan',up:true,proto:'dhcp',l3_device:'phy1-sta0',metric:10,
+     route:[{target:'0.0.0.0',mask:0,nexthop:'192.0.2.1'}], 'ipv4-address':[{address:'192.0.2.8'}]}
+   ]}};
+   dashboard.due={}; await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('.zc-connection .zc-state').innerText(),'WAN up');
+  assert.deepEqual(await page.locator('.zc-traffic-values strong').allTextContents(),['—','—'],'old WAN rates survived uplink change');
+  for(let sample=0;sample<2;sample++) {
+   await page.clock.runFor(5000);
+   await page.evaluate(async()=>{dashboard.due={};await dashboard.scheduler.refresh();});
+  }
+  assert.match(await page.locator('.zc-traffic-values').innerText(),/82\.4 Mbps/);
+  assert.equal(await page.locator('.zc-chart-caption').innerText().then(s=>s.includes('phy1-sta0')),true);
+  assert.equal(await page.locator('.zc-traffic-empty').count(),0);
+  assert.equal(await page.evaluate(()=>fixture.calls.filter(c=>c.key==='network.device.status').at(-1).args[0]),'phy1-sta0');
+  await page.evaluate(async()=>{
+   const wired=fixture.overrides['network.interface.dump'].interface[0];
+   wired.up=true;wired.route=[{target:'0.0.0.0',mask:0}];
+   dashboard.due={};await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.evaluate(()=>dashboard.latestDevice),'phy1-sta0','backup WAN displaced the lower-metric Wi-Fi uplink');
+  await page.evaluate(async()=>{
+   fixture.overrides['network.interface.dump'].interface[0].metric=5;
+   dashboard.due={};await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.evaluate(()=>dashboard.latestDevice),'wan');
+  assert.deepEqual(await page.locator('.zc-traffic-values strong').allTextContents(),['—','—'],'failover reused counters from another device');
+  assert.equal(await page.evaluate(()=>dashboard.history.length),0,'old uplink history survived failover');
+  await page.evaluate(async()=>{fixture.overrides={};dashboard.due={};await dashboard.scheduler.refresh();});
   await page.evaluate(async () => {
    fixture.overrides = {'network.interface.dump':{interface:[
     {interface:'wan',up:true,proto:'pppoe',l3_device:'pppoe-wan', 'ipv4-address':[{address:'192.0.2.2'}]},
