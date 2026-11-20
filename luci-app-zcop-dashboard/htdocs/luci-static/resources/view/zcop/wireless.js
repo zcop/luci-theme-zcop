@@ -30,7 +30,7 @@ function svg(tag,attrs,text) {const node=document.createElementNS('http://www.w3
 
 return view.extend({
  render() {
-  if(!document.getElementById('zcop-wireless-style'))document.head.append(el('link',{id:'zcop-wireless-style',rel:'stylesheet',href:L.resource('zcop/wireless.css')}));
+  if(!document.getElementById('zcop-wireless-style'))document.head.append(el('link',{id:'zcop-wireless-style',rel:'stylesheet',href:L.resource('zcop/wireless.css')+'?v=0.8.5'}));
   this.writable=L.hasViewPermission()===true;this.snapshots={};this.scans={};this.rows=[];this.widths={};this.disposed=false;
   this.root=el('div',{'class':'zc-wireless'});this.draw();this.refresh();
   window.addEventListener('pagehide',()=>{this.disposed=true;clearTimeout(this.expiry);},{once:true});
@@ -144,13 +144,18 @@ return view.extend({
   if(expirations.length)this.expiry=setTimeout(()=>this.draw(),Math.min(...expirations)+50);
  },
  graph(radio,rows) {
-  const shown=rows.slice(0,24),allSpans=rows.flatMap(r=>r.spans),freqs=(radio.freqs||[]).map(f=>f.mhz).filter(m=>wireless.band(m)===radio.band);
+  const shown=rows.slice(0,24),allSpans=rows.flatMap(r=>r.spans).concat(radio.occupied||[]),freqs=(radio.freqs||[]).map(f=>f.mhz).filter(m=>wireless.band(m)===radio.band);
   const min=Math.min(...allSpans.map(s=>s[0]),...freqs.map(f=>f-10))-5,max=Math.max(...allSpans.map(s=>s[1]),...freqs.map(f=>f+10))+5;
   const left=48,right=1040,top=18,bottom=195,x=f=>left+(f-min)/(max-min)*(right-left),y=db=>top+(-30-Math.max(-100,Math.min(-30,db)))/70*(bottom-top);
   const plot=svg('svg',{viewBox:'0 0 1060 230',role:'img','aria-label':_('Nearby network signal strength and channel overlap. The table below provides exact observations.')});
+  for (const span of radio.occupied||[]) {
+   const area=svg('rect',{x:x(span[0]),y:top,width:x(span[1])-x(span[0]),height:bottom-top,'class':'zw-current-band'});
+   area.append(svg('title',{},_('Current occupied band')+' · '+radio.width+' MHz · '+span[0]+'–'+span[1]+' MHz'));
+   plot.append(area);
+  }
   for(const value of [-30,-50,-70,-90]){plot.append(svg('line',{x1:left,x2:right,y1:y(value),y2:y(value),'class':'zw-grid'}),svg('text',{x:8,y:y(value)+4,'class':'zw-axis'},String(value)));}
   plot.append(svg('text',{x:8,y:12,'class':'zw-axis'},'dBm'));
-  if(radio.channel&&radio.mhz){plot.append(svg('line',{x1:x(radio.mhz),x2:x(radio.mhz),y1:top,y2:bottom,'class':'zw-current'}),svg('text',{x:x(radio.mhz)+4,y:top+10,'class':'zw-axis'},_('Current')+' '+radio.channel));}
+  if(radio.channel&&radio.mhz){plot.append(svg('line',{x1:x(radio.mhz),x2:x(radio.mhz),y1:top,y2:bottom,'class':'zw-current'}),svg('text',{x:Math.min(x(radio.mhz)+4,right-125),y:top+10,'class':'zw-axis'},_('Current')+' '+radio.channel+(radio.width?' · '+radio.width+' MHz':'')));}
   shown.slice().reverse().forEach(row=>{const i=shown.indexOf(row);for(const span of row.spans){const inset=Math.min(5,(span[1]-span[0])/4),points=[[span[0],bottom],[span[0]+inset,y(row.signal)],[span[1]-inset,y(row.signal)],[span[1],bottom]].map(p=>x(p[0])+','+p[1]).join(' ');
    const shape=svg('polygon',{points,fill:colors[i%colors.length],'fill-opacity':'.12',stroke:colors[i%colors.length],'stroke-width':'1.6','vector-effect':'non-scaling-stroke'});
    shape.append(svg('title',{},(row.ssid||_('Hidden SSID'))+' · '+_('Channel')+' '+row.channel+' · '+(row.estimated?'~':'')+row.width+' MHz · '+row.signal+' dBm'));plot.append(shape);}});

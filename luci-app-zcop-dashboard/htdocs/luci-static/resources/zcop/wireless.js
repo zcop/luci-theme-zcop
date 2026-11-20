@@ -13,29 +13,47 @@ function frequency(channel, which) {
   : which === '5g' ? 5000 + channel * 5 : which === '6g' ? (channel === 2 ? 5935 : 5950 + channel * 5) : null;
 }
 function width(mode) { const match = String(mode || '').match(/(?:HT|HE|EHT|VHT)(20|40|80|160|320)(?:[+-])?$/); return match ? Number(match[1]) : null; }
-function spans(row, which) {
+function operationSpans(primary, which, channelWidth, center1, center2) {
+ if (!finite(primary) || ![20,40,80,160,320,8080].includes(channelWidth) || !center1) return [];
+ if (channelWidth === 8080) {
+  if (!center2) return [];
+  channelWidth = 80;
+ }
+ // VHT's revised signalling can encode 160 or 80+80 as width 80 and two centers.
+ if (center2 && channelWidth === 80 && Math.abs(center1 - center2) === 8) {
+  channelWidth = 160;
+  center1 = center2;
+  center2 = 0;
+ }
+ const first = frequency(center1, which), second = frequency(center2, which);
+ if (band(first) !== which || center2 && band(second) !== which
+  || which === '2g' && channelWidth > 40 || which === '5g' && channelWidth > 160) return [];
+ const occupied = center2 && channelWidth === 80
+  ? [[first-40,first+40],[second-40,second+40]]
+  : [[first-channelWidth/2,first+channelWidth/2]];
+ return occupied.some(([low,high]) => primary >= low+10 && primary <= high-10) ? occupied : [];
+}
+function footprint(row, which) {
  const primary = row.mhz || frequency(row.channel, which);
- if (!finite(primary)) return [];
+ if (!finite(primary)) return {spans:[],estimated:true};
  for (const key of ['eht_operation', 'he_operation', 'vht_operation']) {
   const op = row[key];
-  if (!op || ![20,40,80,160,320].includes(op.channel_width) || !op.center_freq_1) continue;
-  let w = op.channel_width, c1 = op.center_freq_1, c2 = op.center_freq_2;
-  // VHT's revised signalling can encode 160 or 80+80 as width 80 and two centers.
-  if (c2 && w === 80 && Math.abs(c1-c2) === 8) { w = 160; c1 = c2; c2 = 0; }
-  const f1 = frequency(c1, which);
-  if (band(f1)!==which || c2 && band(frequency(c2,which))!==which || which==='2g'&&w>40 || which==='5g'&&w>160) continue;
-  if (c2 && w === 80) return [[f1-40,f1+40],[frequency(c2,which)-40,frequency(c2,which)+40]];
-  return [[f1-w/2,f1+w/2]];
+  if (!op) continue;
+  // iwinfo's VHT 40 value means 20/40 MHz. HT operation gives the exact width.
+  if (key==='vht_operation' && op.channel_width===40) continue;
+  const occupied=operationSpans(primary,which,op.channel_width,op.center_freq_1,op.center_freq_2);
+  if (occupied.length) return {spans:occupied,estimated:false};
  }
  const ht = row.ht_operation;
- if (ht?.channel_width === 40 && /^(above|below)$/.test(ht.secondary_channel_offset)) {
+ if ([40,2040].includes(ht?.channel_width) && /^(above|below)$/.test(ht.secondary_channel_offset)) {
   const center = primary + (ht.secondary_channel_offset === 'above' ? 10 : -10);
-  return [[center-20,center+20]];
+  return {spans:[[center-20,center+20]],estimated:false};
  }
  // A conservative 22 MHz footprint for a 2.4 GHz beacon with no wide operation.
  const half = which === '2g' ? 11 : 10;
- return [[primary-half,primary+half]];
+ return {spans:[[primary-half,primary+half]],estimated:true};
 }
+function spans(row, which) { return footprint(row,which).spans; }
 function scan(results, which, own) {
  if (!Array.isArray(results)) throw new Error('Invalid scan response');
  const local = new Set((own || []).map(s => String(s).toLowerCase())), entries = new Map();
@@ -45,9 +63,9 @@ function scan(results, which, own) {
   const id = item.bssid.toLowerCase(), mhz = item.mhz || frequency(item.channel, which), signal = dbm(item.signal);
   if (local.has(id)) continue;
   if (band(mhz) !== which || signal === null || !Number.isInteger(item.channel) || item.channel <= 0) { omitted++; continue; }
-  const row = {ssid: String(item.ssid || ''), bssid: id, channel:item.channel, mhz, signal, spans:spans(item,which)};
+  const occupied = footprint(item,which);
+  const row = {ssid: String(item.ssid || ''), bssid: id, channel:item.channel, mhz, signal, spans:occupied.spans, estimated:occupied.estimated};
   row.width = row.spans.reduce((n,s) => n+s[1]-s[0],0);
-  row.estimated = which==='2g'&&row.width===22 || !item.ht_operation&&!item.vht_operation&&!item.he_operation&&!item.eht_operation;
   if(which==='2g'&&row.width===22)row.width=20;
   if (!entries.has(id) || entries.get(id).signal < signal) entries.set(id,row);
  }
@@ -143,10 +161,12 @@ function radio(name, data, details) {
  const station=nets.find(n=>['sta','sta-wds'].includes(n.config?.mode));
  const uplink=clientMode?dbm(station?.iwinfo?.signal ?? (station?.ifname===nets[0]?.ifname?reported.signal:null)):null;
  const busy=survey(details.survey,details.previousSurvey,mhz);
+ const channel=active ? (reported.channel || source.channel || null) : null, actualWidth=active?width(reported.htmode):null;
+ const occupied=active?operationSpans(mhz,band(mhz),actualWidth,reported.center_chan1 || (actualWidth===20?channel:0),reported.center_chan2):[];
  return {name,phy:data.iwinfo?.phy,band:data.config?.band || band(mhz),active,disabled:data.disabled===true || ['1',1,true].includes(data.config?.disabled),
   state:data.disabled===true||['1',1,true].includes(data.config?.disabled)?'disabled':data.pending===true?'pending':data.up===false?'down':data.up!==true||!Array.isArray(data.interfaces)?'unknown':!nets.length?'empty':'up',
-  mhz,channel:active ? (reported.channel || source.channel || null) : null, configured:data.config?.channel || null,
-  width:active?width(reported.htmode):null,configuredWidth:width(data.config?.htmode),country:reported.country || source.country || data.config?.country,
+  mhz,channel,configured:data.config?.channel || null,occupied,
+  width:actualWidth,configuredWidth:width(data.config?.htmode),country:reported.country || source.country || data.config?.country,
   count,signals,uplink,noise:busy.noise ?? dbm(source.noise),busy:busy.busy,interval:busy.interval,
   nets,own:nets.map(n=>n.iwinfo?.bssid).filter(Boolean),hardware:data.iwinfo?.hardware?.name || '',
   htmodes:data.iwinfo?.htmodes || [],freqs:details.freqs || null};

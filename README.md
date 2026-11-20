@@ -104,6 +104,11 @@ BSSIDs. No configuration changes are sent; use **Network → Wireless** to choos
 a channel through LuCI's normal validation. A client or mesh link may follow
 its upstream peer's channel.
 
+The shaded current band uses the radio's reported width and centre channel.
+The dashed line marks its primary channel. An 80 MHz radio spans four 20 MHz
+channels, so neighbours with different primaries can occupy the same band.
+Missing operating centres leave the current-band footprint unavailable.
+
 The advisory ranks legal channel blocks by summed signal power weighted by
 the fraction of overlapping spectrum. Advertised 40/80/160/80+80 MHz footprints
 are considered, with an explicit approximate 20 MHz fallback when width is

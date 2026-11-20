@@ -32,6 +32,7 @@
 .zw-axis{fill:var(--w-muted);font:11px system-ui,sans-serif}
 .zw-grid{stroke:var(--w-line);stroke-width:.7}
 .zw-current{stroke:var(--w-accent);stroke-dasharray:4 4;stroke-width:1}
+.zw-current-band{fill:var(--w-accent);fill-opacity:.08;stroke:var(--w-accent);stroke-opacity:.6;stroke-dasharray:4 4;stroke-width:1}
 .zw-chart-note{display:block;text-align:right;font-size:10px;color:var(--w-muted);margin-top:-3px;padding-bottom:3px}
 .zw-legend{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;margin:9px 0 13px;font-size:11px;color:var(--w-muted)}
 .zw-legend>span{display:inline-flex;align-items:center;gap:6px;max-width:180px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
