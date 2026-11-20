@@ -48,6 +48,28 @@ return baseclass.extend({
  append(history, sample) {
   return history.concat([sample]).slice(-60);
  },
+ recorded(reply, device) {
+  if (!Array.isArray(reply?.samples) || !Number.isFinite(reply.now)) return null;
+  const samples = reply.samples.slice(-60), latest = samples[samples.length - 1];
+  if (!Number.isFinite(latest?.time) || reply.now < latest.time || reply.now - latest.time > 15000) return null;
+  const cpuHistory = [], ramHistory = [], history = [];
+  let previous = null;
+  for (const sample of samples) {
+   if (!Number.isFinite(sample?.time) || sample.time > reply.now) { previous = null; continue; }
+   const continuous = previous && sample.time > previous.time && sample.time - previous.time <= 15000;
+   const busy = continuous ? this.cpuPercent(previous.cpu, sample.cpu) : null;
+   cpuHistory.push(Number.isFinite(busy) ? busy : null);
+   const memory = sample.memory;
+   const validMemory = Number.isFinite(memory?.total) && memory.total > 0 && Number.isFinite(memory.available)
+    && memory.available >= 0 && memory.available <= memory.total;
+   ramHistory.push(validMemory ? (memory.total - memory.available) / memory.total * 100 : null);
+   const point = entry => entry?.network?.[device] ? { ...entry.network[device], device, time: entry.time } : null;
+   history.push(continuous ? this.rate(point(previous), point(sample)) : null);
+   previous = sample;
+  }
+  return { cpuHistory, ramHistory, history, cpuBusy: cpuHistory[cpuHistory.length - 1] ?? null,
+   traffic: history[history.length - 1] ?? null, memory: latest.memory || {} };
+ },
  count(text) {
   return /^\d+\s*$/.test(text || '') ? Number(text.trim()) : null;
  },

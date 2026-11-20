@@ -3,6 +3,9 @@
   "description": "Read lightweight router dashboard snapshots",
   "read": {
    "ubus": {
+    "luci.zcop_dashboard": [
+     "history"
+    ],
     "system": [
      "info",
      "board"

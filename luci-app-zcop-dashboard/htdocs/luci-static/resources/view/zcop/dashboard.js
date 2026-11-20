@@ -16,6 +16,7 @@ const wireless = rpc.declare({ object: 'luci-rpc', method: 'getWirelessDevices',
 const leases = rpc.declare({ object: 'luci-rpc', method: 'getDHCPLeases', expect: { '': {} }, reject: true });
 const mounts = rpc.declare({ object: 'luci', method: 'getMountPoints', expect: { result: [] }, reject: true });
 const read = rpc.declare({ object: 'file', method: 'read', params: ['path'], expect: { data: '' }, reject: true });
+const recorded = rpc.declare({ object: 'luci.zcop_dashboard', method: 'history', expect: { '': {} }, reject: true });
 
 const number = n => Number.isFinite(n) ? n.toFixed(1) : '—';
 const mib = n => Number.isFinite(n) ? number(n / 1048576) + ' MiB' : '—';
@@ -48,7 +49,7 @@ return view.extend({
  },
  render(identity) {
   if (!document.querySelector('#zcop-dashboard-style'))
-   document.head.append(E('link', { id: 'zcop-dashboard-style', rel: 'stylesheet', href: L.resource('zcop/dashboard.css') + '?v=0.8.3' }));
+   document.head.append(E('link', { id: 'zcop-dashboard-style', rel: 'stylesheet', href: L.resource('zcop/dashboard.css') + '?v=0.8.4' }));
   this.identity = identity;
   this.processor = identity.zcopProcessor || {};
   this.wanModeUrl = identity.zcopCanConfigurePorts ? L.url('admin', 'network', 'cr881x-wan-mode') : null;
@@ -99,7 +100,7 @@ return view.extend({
  async collect() {
   const now = Date.now(), jobs = [], generation = this.generation;
   let required = 0, successful = 0;
-  const optional = name => name.startsWith('nss') || name === 'portMode';
+  const optional = name => name.startsWith('nss') || name === 'portMode' || name === 'recorded';
   const queue = (name, period, fn) => {
    if (now < (this.due[name] || 0)) return;
    this.due[name] = now + period;
@@ -112,6 +113,7 @@ return view.extend({
   };
   queue('system', 15000, info);
   queue('cpu', 15000, () => read('/proc/stat'));
+  queue('recorded', this.scheduler.interval || 5000, recorded);
   queue('interfaces', 15000, interfaces);
   queue('devices', 15000, devices);
   // Optional app integration, on the existing device cadence. No role changes
@@ -147,7 +149,7 @@ return view.extend({
    this.cpuHistory = metrics.append(this.cpuHistory, this.cpuBusy);
    this.cpuBaseline = sample; this.cpuTime = state.cpu?.time;
   }
-  const memory = current('system')?.memory || {};
+  let memory = current('system')?.memory || {};
   const wanSample = current('wan');
   if (this.latestDevice !== wan?.l3_device) {
    this.history = []; this.wanBaseline = null; this.traffic = null;
@@ -160,6 +162,16 @@ return view.extend({
    this.history = metrics.append(this.history, this.traffic);
    this.wanBaseline = next; this.wanTime = state.wan.time;
   } else if (!wan?.up || !wanSample || wanSample.device !== wan.l3_device) { this.traffic = null; this.wanBaseline = null; }
+  const captured = metrics.recorded(current('recorded'), wan?.up ? wan.l3_device : null);
+  if (captured) {
+   this.cpuBusy = captured.cpuBusy; this.cpuHistory = captured.cpuHistory;
+   this.ramHistory = captured.ramHistory; this.ramTime = state.system?.time;
+   if (captured.history.some(Boolean)) {
+    this.history = captured.history; this.traffic = captured.traffic;
+   }
+   this.cpuBaseline = this.wanBaseline = null;
+   memory = captured.memory;
+  }
   const peak = Math.max(1, ...this.history.filter(Boolean).flatMap(sample => [sample.down, sample.up]));
   const trafficMessage = !state.interfaces && !this.failures.interfaces ? _('Collecting network status…')
    : this.failures.interfaces ? _('WAN status unavailable')

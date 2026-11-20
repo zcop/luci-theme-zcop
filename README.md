@@ -252,13 +252,20 @@ Source: [Wireshark manufacturer database](https://www.wireshark.org/download/aut
 
 ## Small-router defaults
 
-- Traffic: 5 seconds; system, link and CPU snapshots: 15 seconds; wireless,
-  leases and optional NSS counts: 30 seconds; storage: 60 seconds.
+- Traffic and recorded CPU/RAM history refresh every 5 seconds. System, link
+  and fallback CPU snapshots refresh every 15 seconds, wireless, leases and
+  optional NSS counts every 30 seconds, and storage every 60 seconds.
 - One collector in flight; no sampling sleep and no shell `top` command.
 - Polling stops when paused, hidden or leaving the page. An already running
   request can finish. Failures back off; manual refresh is available.
-- At most 60 numeric samples per WAN, CPU and RAM history in the browser. No RRD, collectd, database,
-  router-side history, packet capture, flow dump, Wi-Fi scan or Internet probe.
+- A sampler inside rpcd retains 60 CPU, RAM and interface-counter snapshots at
+  five-second intervals. The five-minute RAM buffer continues while Chrome is
+  inactive or suspended. Returning to the dashboard reloads the recorded history.
+  The buffer resets when rpcd or the router restarts and covers at most 64
+  interfaces. Collection reads procfs without shell commands or flash writes.
+- The browser displays at most 60 samples per WAN, CPU and RAM history. Missing
+  sampler support falls back to visible-page snapshots. Missing samples remain
+  unavailable. No RRD, collectd, packet capture, flow dump, Wi-Fi scan or Internet probe.
 - Network activity follows the up interface carrying the lowest-metric IPv4 default route,
   falling back to IPv6 defaults. Wi-Fi clients, PPPoE, bridges and named tunnel
   uplinks use their reported L3 device; a down configured `wan` does not hide
@@ -281,6 +288,8 @@ from that earlier concept are not implemented. Local AP link statistics are
 available in Devices.
 
 Run `node tests/unit.cjs` for metric and scheduler checks.
+Run `UCODE=/path/to/ucode node tests/history-unit.cjs` for history recovery and
+the router sampler's bounded buffer and collection without browser requests.
 `tests/system-browser.cjs` covers the System properties layout and retained
 native form-node contracts with synthetic fixtures. The browser harness
 in `tests/browser.cjs` exercises the actual theme menu and live view with

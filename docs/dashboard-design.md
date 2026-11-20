@@ -68,20 +68,27 @@ for scan scope and recommendation limits.
 
 ## Data and resource budget
 
-Existing RPC methods, ACLs, collection schedule and scheduler are reused. There
-is no added router service, polling source, shell command, flow dump or history
-database. One collector runs at a time; numeric history stays in the browser.
+The browser reuses the existing RPC methods, collection schedule and scheduler.
+The authenticated `luci.zcop_dashboard.history` method supplies samples retained
+inside rpcd by a five-second timer. Its RAM buffer holds 60 snapshots of CPU
+time, available memory and byte counters for at most 64 interfaces. It reads
+procfs directly and resets on rpcd restart or reboot.
 
 | Snapshot | Refresh while visible | Source |
 | --- | --- | --- |
 | Board/processor identity | Once per page | system.board, /proc/cpuinfo, CPU present list and policy0 cpuinfo_max_freq |
 | WAN counters | 5 seconds; selectable 10 seconds or manual | Selected WAN L3 device status |
-| CPU, memory, uptime and interface/link state | 15 seconds | /proc/stat, system.info and existing network summaries |
+| CPU, memory and interface-counter history | Fetch every 5 seconds while visible, record every 5 seconds inside rpcd | /proc/stat, /proc/meminfo and /proc/net/dev |
+| Live system and interface/link state | 15 seconds | system.info and existing network summaries |
 | Radio state, leases and optional accelerated-flow counts | 30 seconds | Existing luci-rpc summaries and two debugfs scalar reads |
 | Writable storage | 60 seconds | Existing mount summary |
 
-Collection pauses when hidden, leaving the page or explicitly paused. A request
-already in flight can finish. Failures back off. Each of the WAN, CPU and RAM histories is limited to60 entries.
+Browser requests pause when hidden, leaving the page or explicitly paused. A
+request already in flight can finish. The rpcd sampler continues independently,
+so returning to the page recovers up to five minutes of real samples. Browser
+rendering can wait while Chrome is suspended. Older history expires from the
+bounded buffer. Missing sampler support falls back to visible-page snapshots.
+Failures back off. Each of the WAN, CPU and RAM histories is limited to60 entries.
 CPU busy percentage uses CPU-time deltas, not load average or a shell top command.
 
 ## Accuracy

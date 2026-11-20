@@ -1,12 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-zcop-dashboard
-PKG_VERSION:=0.8.3
+PKG_VERSION:=0.8.4
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 
 LUCI_TITLE:=Lightweight Zcop router dashboard
-LUCI_DEPENDS:=+luci-theme-zcop +rpcd-mod-file +rpcd-mod-luci +rpcd-mod-iwinfo +iw
+LUCI_DEPENDS:=+luci-theme-zcop +rpcd-mod-file +rpcd-mod-luci +rpcd-mod-iwinfo +rpcd-mod-ucode +ucode-mod-fs +ucode-mod-uloop +iw
 # CSSTidy 1.3 removes @container conditions and leaks their rules globally.
 LUCI_MINIFY_CSS:=0
 

@@ -1,0 +1,73 @@
+// SPDX-License-Identifier: Apache-2.0
+'use strict';
+
+import { readfile } from 'fs';
+import { timer } from 'uloop';
+
+const samples = [];
+const boot_id = trim(readfile('/proc/sys/kernel/random/boot_id') || '');
+
+function uptime() {
+	const value = match(readfile('/proc/uptime') || '', /^([0-9]+([.][0-9]+)?)/);
+	return value ? +value[1] * 1000 : null;
+}
+
+function sample() {
+	const time = uptime();
+	if (time == null)
+		return;
+
+	const cpu_line = match(readfile('/proc/stat') || '', /^cpu[[:space:]]+([^\n]+)/);
+	let cpu = null;
+	if (cpu_line) {
+		const values = map(split(trim(cpu_line[1]), /[[:space:]]+/), value => +value);
+		if (length(values) >= 4) {
+			cpu = { total: 0, idle: values[3] + (values[4] || 0) };
+			for (let i = 0; i < min(length(values), 8); i++)
+				cpu.total += values[i];
+		}
+	}
+
+	const meminfo = readfile('/proc/meminfo') || '';
+	const total = match(meminfo, /(^|\n)MemTotal:[[:space:]]+([0-9]+) kB/);
+	const available = match(meminfo, /(^|\n)MemAvailable:[[:space:]]+([0-9]+) kB/);
+	const memory = total && available
+		? { total: +total[2] * 1024, available: +available[2] * 1024 } : null;
+
+	const network = {};
+	let count = 0;
+	for (let line in split(readfile('/proc/net/dev') || '', '\n')) {
+		const fields = match(line, /^[[:space:]]*([^[:space:]:]+):[[:space:]]*(.+)$/);
+		if (!fields || fields[1] == 'lo')
+			continue;
+		const values = split(trim(fields[2]), /[[:space:]]+/);
+		if (length(values) < 16)
+			continue;
+		network[fields[1]] = { rx: +values[0], tx: +values[8] };
+		if (++count >= 64)
+			break;
+	}
+
+	push(samples, { time, cpu, memory, network });
+	if (length(samples) > 60)
+		shift(samples);
+}
+
+// rpcd owns the event loop. Each sample stays in this VM's bounded RAM buffer.
+let collector;
+collector = timer(0, function() {
+	try { sample(); }
+	catch (err) { /* The next tick retries unavailable procfs data. */ }
+	collector.set(5000);
+});
+
+return {
+	'luci.zcop_dashboard': {
+		history: {
+			args: {},
+			call: function() {
+				return { boot_id, now: uptime(), interval: 5000, samples };
+			}
+		}
+	}
+};

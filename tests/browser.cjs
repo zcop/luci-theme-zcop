@@ -93,6 +93,7 @@ const server = http.createServer((req, res) => {
     if (key === 'luci.cr881x_wan_mode.status' && fixture.portModeFailure) throw Error('optional app unavailable');
     let data;
     if (key === 'system.info') data = { uptime: 187200, memory: { total: 170917888, available: 36280729 } };
+    else if (key === 'luci.zcop_dashboard.history') data = fixture.recorded || {};
     else if (key === 'system.board') data = { model:'CR881x · synthetic fixture',hostname:'router-fixture',system:'ARMv8',kernel:'6.18.60',release:{distribution:'OpenWrt',version:'SNAPSHOT',revision:'test-build',target:'qualcommax/ipq50xx'} };
     else if (key === 'network.interface.dump') data = { interface: [{ interface:'lan',up:true,l3_device:'br-lan',proto:'static','ipv4-address':[{address:'192.0.2.1'}] }, { interface: 'wan', up: !fixture.down, l3_device: fixture.wanDevice, proto: 'dhcp', 'ipv4-address': [{address:'192.0.2.2'}] }] };
     else if (key === 'network.device.status') data = { statistics: { rx_bytes: Math.floor(Date.now() / 1000 * 10300000), tx_bytes: Math.floor(Date.now() / 1000 * 1600000) } };
@@ -611,6 +612,41 @@ const server = http.createServer((req, res) => {
   assert.equal(permission,false);
   assert.equal(await page.locator('a.zc-port').count(),0,'denied WAN Mode link exposed');
   assert.equal(await page.locator('.zc-port').count(),4,'denied settings hid read-only port status');
+  await page.evaluate(async () => {
+   fixture.overrides = { 'network.interface.dump': { interface: [
+    { interface:'wwan',up:true,l3_device:'phy1-sta0',proto:'dhcp',route:[{target:'0.0.0.0',mask:0,nexthop:'192.0.2.1'}] }
+   ] } };
+   fixture.recorded = { boot_id:'fixture',now:10000,samples:[
+    {time:5000,cpu:{total:5000,idle:4500},memory:{total:1000,available:700},network:{'phy1-sta0':{rx:0,tx:0}}},
+    {time:10000,cpu:{total:10000,idle:9000},memory:{total:1000,available:650},network:{'phy1-sta0':{rx:5000000,tx:1000000}}}
+   ] };
+   dashboard.scheduler.setInterval(5000); dashboard.due={};
+   await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('.zc-cpu .zc-util-value').innerText(),'10.0%');
+  assert.equal(await page.locator('.zc-memory .zc-util-value').innerText(),'35.0%');
+  const beforeBackground = await page.evaluate(() => {
+   fixture.hidden=true; document.dispatchEvent(new Event('visibilitychange'));
+   return fixture.calls.length;
+  });
+  await page.clock.runFor(60000);
+  assert.equal(await page.evaluate(()=>fixture.calls.length),beforeBackground,'background history required browser requests');
+  await page.evaluate(async () => {
+   // The router collector retained a load spike while this page did no work.
+   fixture.recorded.samples.push(
+    {time:15000,cpu:{total:15000,idle:11500},memory:{total:1000,available:200},network:{'phy1-sta0':{rx:15000000,tx:2000000}}},
+    {time:20000,cpu:{total:20000,idle:16400},memory:{total:1000,available:600},network:{'phy1-sta0':{rx:16000000,tx:3000000}}}
+   );
+   fixture.recorded.now=20000;
+   fixture.hidden=false; document.dispatchEvent(new Event('visibilitychange'));
+   await dashboard.scheduler.refresh();
+  });
+  assert.deepEqual(await page.evaluate(()=>dashboard.cpuHistory),[null,10,50,2]);
+  assert.deepEqual(await page.evaluate(()=>dashboard.ramHistory),[30,35,80,40]);
+  assert.equal(await page.evaluate(()=>dashboard.history[2].down),16);
+  assert.equal(await page.locator('.zc-cpu .zc-util-value').innerText(),'2.0%');
+  assert.equal(await page.locator('.zc-memory .zc-util-value').innerText(),'40.0%');
+  await page.evaluate(()=>dashboard.scheduler.stop());
   assert.deepEqual(errors, []);
   console.log('PASS: actual modules, ACL/deep menus, metric units, hidden/paused/manual modes, unavailable data, 3 palettes and responsive layouts');
  } finally { await browser.close(); server.close(); }
