@@ -92,7 +92,7 @@ const server = http.createServer((req, res) => {
     if (fixture.fail) throw Error('fixture unavailable');
     if (key === 'luci.cr881x_wan_mode.status' && fixture.portModeFailure) throw Error('optional app unavailable');
     let data;
-    if (key === 'system.info') data = { uptime: 187200, memory: { total: 170917888, available: 36280729 } };
+    if (key === 'system.info') data = { uptime: 187200, memory: { total: 170917888, available: 36280729, free: 31457280, cached: 42991616, shared: 1048576 } };
     else if (key === 'luci.zcop_dashboard.history') data = fixture.recorded || {};
     else if (key === 'system.board') data = { model:'CR881x · synthetic fixture',hostname:'router-fixture',system:'ARMv8',kernel:'6.18.60',release:{distribution:'OpenWrt',version:'SNAPSHOT',revision:'test-build',target:'qualcommax/ipq50xx'} };
     else if (key === 'network.interface.dump') data = { interface: [{ interface:'lan',up:true,l3_device:'br-lan',proto:'static','ipv4-address':[{address:'192.0.2.1'}] }, { interface: 'wan', up: !fixture.down, l3_device: fixture.wanDevice, proto: 'dhcp', 'ipv4-address': [{address:'192.0.2.2'}] }] };
@@ -197,6 +197,35 @@ const server = http.createServer((req, res) => {
     area([null,50,50]).isPointInFill(new DOMPoint(20,30))];
    charts.forEach(chart => chart.remove()); return result;
   }), [true,true,true,true,false,'','',true], 'sample history did not omit missing/startup periods or changed the fixed percentage scale');
+  assert.match(await page.locator('.zc-memory').innerText(), /RAM usage/);
+  assert.match(await page.locator('.zc-memory-legend').innerText(), /Used 93[.]0 MiB/);
+  assert.match(await page.locator('.zc-memory-legend').innerText(), /File cache 40[.]0 MiB/);
+  assert.match(await page.locator('.zc-memory .zc-note').innerText(), /34[.]6 MiB available/);
+  for (const palette of ['light','dark','luxury']) {
+   await page.locator(`[data-zcop-palette="${palette}"]`).click();
+   const colors = await page.locator('.zc-memory-area').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).fill));
+   assert.notEqual(colors[0], colors[1], 'used RAM and cache share a color in ' + palette);
+  }
+  assert.deepEqual(await page.evaluate(() => {
+   const chart = dashboard.memoryChart([{used:25,cache:25},null,{used:25,cache:25}]);
+   document.querySelector('#view').append(chart);
+   const used = chart.querySelector('.zc-memory-area.zc-memory-used');
+   const cache = chart.querySelector('.zc-memory-area.zc-memory-cache');
+   const result = [used.isPointInFill(new DOMPoint(80,40)),cache.isPointInFill(new DOMPoint(80,40)),
+    used.isPointInFill(new DOMPoint(80,30)),cache.isPointInFill(new DOMPoint(80,30)),
+    cache.isPointInFill(new DOMPoint(80,15))];
+   chart.remove();return result;
+  }),[true,false,false,true,false],'RAM areas overlap, invent missing data or ignore the fixed percentage scale');
+  assert.equal(await page.locator('.zc-memory .zc-util-value').innerText(),'81.6%');
+  await page.evaluate(async () => {
+   fixture.overrides['system.info'] = {uptime:187200,memory:{total:170917888,available:45000000,free:52428800,cached:22020096,shared:1048576}};
+   dashboard.due.system=0;await dashboard.scheduler.refresh();
+  });
+  assert.equal(await page.locator('.zc-memory .zc-util-value').innerText(),'69.3%','headline did not follow used RAM plus cache');
+  assert.match(await page.locator('.zc-memory-legend').innerText(),/Used 93[.]0 MiB/);
+  assert.match(await page.locator('.zc-memory-legend').innerText(),/File cache 20[.]0 MiB/);
+  assert.match(await page.locator('.zc-memory .zc-note').innerText(),/42[.]9 MiB available/);
+  await page.evaluate(async () => { delete fixture.overrides['system.info']; dashboard.due.system=0;await dashboard.scheduler.refresh(); });
   const historyBefore = await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]);
   await page.evaluate(() => {dashboard.draw();dashboard.draw();});
   assert.deepEqual(await page.evaluate(() => [dashboard.cpuHistory.length,dashboard.ramHistory.length]),historyBefore,'redrawing duplicates resource samples');
@@ -617,14 +646,14 @@ const server = http.createServer((req, res) => {
     { interface:'wwan',up:true,l3_device:'phy1-sta0',proto:'dhcp',route:[{target:'0.0.0.0',mask:0,nexthop:'192.0.2.1'}] }
    ] } };
    fixture.recorded = { boot_id:'fixture',now:10000,samples:[
-    {time:5000,cpu:{total:5000,idle:4500},memory:{total:1000,available:700},network:{'phy1-sta0':{rx:0,tx:0}}},
-    {time:10000,cpu:{total:10000,idle:9000},memory:{total:1000,available:650},network:{'phy1-sta0':{rx:5000000,tx:1000000}}}
+    {time:5000,cpu:{total:5000,idle:4500},memory:{total:1000,available:700,free:100,cached:400,shared:50},network:{'phy1-sta0':{rx:0,tx:0}}},
+    {time:10000,cpu:{total:10000,idle:9000},memory:{total:1000,available:650,free:150,cached:350,shared:50},network:{'phy1-sta0':{rx:5000000,tx:1000000}}}
    ] };
    dashboard.scheduler.setInterval(5000); dashboard.due={};
    await dashboard.scheduler.refresh();
   });
   assert.equal(await page.locator('.zc-cpu .zc-util-value').innerText(),'10.0%');
-  assert.equal(await page.locator('.zc-memory .zc-util-value').innerText(),'35.0%');
+  assert.equal(await page.locator('.zc-memory .zc-util-value').innerText(),'85.0%');
   const beforeBackground = await page.evaluate(() => {
    fixture.hidden=true; document.dispatchEvent(new Event('visibilitychange'));
    return fixture.calls.length;
@@ -634,18 +663,18 @@ const server = http.createServer((req, res) => {
   await page.evaluate(async () => {
    // The router collector retained a load spike while this page did no work.
    fixture.recorded.samples.push(
-    {time:15000,cpu:{total:15000,idle:11500},memory:{total:1000,available:200},network:{'phy1-sta0':{rx:15000000,tx:2000000}}},
-    {time:20000,cpu:{total:20000,idle:16400},memory:{total:1000,available:600},network:{'phy1-sta0':{rx:16000000,tx:3000000}}}
+    {time:15000,cpu:{total:15000,idle:11500},memory:{total:1000,available:200,free:50,cached:100,shared:50},network:{'phy1-sta0':{rx:15000000,tx:2000000}}},
+    {time:20000,cpu:{total:20000,idle:16400},memory:{total:1000,available:600,free:200,cached:250,shared:50},network:{'phy1-sta0':{rx:16000000,tx:3000000}}}
    );
    fixture.recorded.now=20000;
    fixture.hidden=false; document.dispatchEvent(new Event('visibilitychange'));
    await dashboard.scheduler.refresh();
   });
   assert.deepEqual(await page.evaluate(()=>dashboard.cpuHistory),[null,10,50,2]);
-  assert.deepEqual(await page.evaluate(()=>dashboard.ramHistory),[30,35,80,40]);
+  assert.deepEqual(await page.evaluate(()=>dashboard.ramHistory),[{used:55,cache:35},{used:55,cache:30},{used:90,cache:5},{used:60,cache:20}]);
   assert.equal(await page.evaluate(()=>dashboard.history[2].down),16);
   assert.equal(await page.locator('.zc-cpu .zc-util-value').innerText(),'2.0%');
-  assert.equal(await page.locator('.zc-memory .zc-util-value').innerText(),'40.0%');
+  assert.equal(await page.locator('.zc-memory .zc-util-value').innerText(),'80.0%');
   await page.evaluate(()=>dashboard.scheduler.stop());
   assert.deepEqual(errors, []);
   console.log('PASS: actual modules, ACL/deep menus, metric units, hidden/paused/manual modes, unavailable data, 3 palettes and responsive layouts');

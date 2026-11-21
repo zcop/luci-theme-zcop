@@ -10,16 +10,18 @@ Base.extend = properties => { class Module extends Base {} Object.assign(Module.
 const Module = new Function('baseclass', fs.readFileSync(path.join(root, 'luci-app-zcop-dashboard/htdocs/luci-static/resources/zcop/metrics.js'), 'utf8'))(Base);
 const metrics = new Module();
 const sample = (time, used, rx, device = 'phy1-sta0') => ({ time, cpu: { total: time, idle: time - used },
- memory: { total: 1000, available: 700 }, network: { [device]: { rx, tx: rx / 2 } } });
+ memory: { total: 1000, available: 700, free: 100, cached: 400, shared: 50 }, network: { [device]: { rx, tx: rx / 2 } } });
 const reply = { now: 15000, samples: [sample(5000, 100, 0), sample(10000, 1100, 5000000), sample(15000, 1200, 6000000)] };
 let result = metrics.recorded(reply, 'phy1-sta0');
 assert.deepEqual(result.cpuHistory, [null, 20, 2]);
-assert.deepEqual(result.ramHistory, [30, 30, 30]);
+assert.deepEqual(result.ramHistory, [{used:55,cache:35}, {used:55,cache:35}, {used:55,cache:35}]);
 assert.equal(result.cpuBusy, 2);
 assert.equal(result.history[1].down, 8);
 assert.equal(result.traffic.down, 1.6);
 assert.equal(result.traffic.up, 0.8);
 assert.equal(metrics.recorded({}, 'wan'), null);
+assert.deepEqual(metrics.recorded({now:5000,samples:[{...sample(5000,100,0),memory:{total:1000,available:700}}]},'wan').ramHistory,[null],
+ 'old/missing breakdown data was fabricated as zero');
 assert.equal(metrics.recorded({ ...reply, now: 14000 }, 'wan'), null);
 assert.equal(metrics.recorded({ ...reply, now: 31000 }, 'wan'), null);
 assert.equal(metrics.recorded(reply, 'wan').traffic, null);
@@ -47,7 +49,7 @@ function readfile(file) {
  if (file == '/proc/sys/kernel/random/boot_id') return 'fixture-boot\\n';
  if (file == '/proc/uptime') return sprintf('%d.00 0.00\\n', now);
  if (file == '/proc/stat') return sprintf('cpu  %d 0 0 %d 0 0 0 0 999 999\\n', now * 10, now * 90);
- if (file == '/proc/meminfo') return 'MemTotal: 1000 kB\\nMemAvailable: 700 kB\\n';
+ if (file == '/proc/meminfo') return 'MemTotal: 1000 kB\\nMemAvailable: 700 kB\\nMemFree: 100 kB\\nCached: 400 kB\\nShmem: 50 kB\\n';
  if (file == '/proc/net/dev') return network;
  return null;
 }
@@ -68,6 +70,9 @@ check(result.samples[0].time == 30000, 'oldest sample not evicted');
 check(result.samples[59].time == 325000, 'latest sample missing');
 check(result.samples[59].cpu.total == 32500, 'guest CPU time counted twice');
 check(result.samples[59].memory.available == 716800, 'memory unit conversion');
+check(result.samples[59].memory.free == 102400, 'free memory unit conversion');
+check(result.samples[59].memory.cached == 409600, 'cache unit conversion');
+check(result.samples[59].memory.shared == 51200, 'shared memory unit conversion');
 check(length(keys(result.samples[59].network)) == 64, 'unbounded interfaces');
 check(result.samples[59].network.dev0.tx == 200, 'network byte fields');
 print('PASS: actual rpcd collector samples without browser requests and bounds history and interfaces\\n');

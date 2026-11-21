@@ -278,7 +278,10 @@ Source: [Wireshark manufacturer database](https://www.wireshark.org/download/aut
 - WAN rates use reported interface counters. The chart-caption tooltip retains
   the unverified NSS-accounting limitation; complete accelerated accounting
   still requires validation on the target.
-- Available memory means Linux `MemAvailable`, not physical RAM or `MemFree`.
+- The RAM graph stacks used memory (`MemTotal - MemFree - file cache`) and
+  file cache (`Cached - Shmem`) in separate colors on a fixed 0–100% scale.
+  Free RAM is unfilled; the headline is `(MemTotal - MemFree) / MemTotal`.
+  The separate available figure remains Linux `MemAvailable`.
   Missing counters stay unavailable rather than displaying an invented zero.
 
 See [dashboard design and acceptance](docs/dashboard-design.md).

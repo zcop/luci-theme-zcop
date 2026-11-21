@@ -33,6 +33,15 @@ function sample() {
 	const available = match(meminfo, /(^|\n)MemAvailable:[[:space:]]+([0-9]+) kB/);
 	const memory = total && available
 		? { total: +total[2] * 1024, available: +available[2] * 1024 } : null;
+	// Reuse this meminfo read; file cache excludes tmpfs/shared memory in the UI.
+	const free = match(meminfo, /(^|\n)MemFree:[[:space:]]+([0-9]+) kB/);
+	const cached = match(meminfo, /(^|\n)Cached:[[:space:]]+([0-9]+) kB/);
+	const shared = match(meminfo, /(^|\n)Shmem:[[:space:]]+([0-9]+) kB/);
+	if (memory && free && cached && shared) {
+		memory.free = +free[2] * 1024;
+		memory.cached = +cached[2] * 1024;
+		memory.shared = +shared[2] * 1024;
+	}
 
 	const network = {};
 	let count = 0;

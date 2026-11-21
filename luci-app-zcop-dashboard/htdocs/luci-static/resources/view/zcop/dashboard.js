@@ -49,7 +49,7 @@ return view.extend({
  },
  render(identity) {
   if (!document.querySelector('#zcop-dashboard-style'))
-   document.head.append(E('link', { id: 'zcop-dashboard-style', rel: 'stylesheet', href: L.resource('zcop/dashboard.css') + '?v=0.8.4' }));
+   document.head.append(E('link', { id: 'zcop-dashboard-style', rel: 'stylesheet', href: L.resource('zcop/dashboard.css') + '?v=0.8.7' }));
   this.identity = identity;
   this.processor = identity.zcopProcessor || {};
   this.wanModeUrl = identity.zcopCanConfigurePorts ? L.url('admin', 'network', 'cr881x-wan-mode') : null;
@@ -163,14 +163,15 @@ return view.extend({
    this.wanBaseline = next; this.wanTime = state.wan.time;
   } else if (!wan?.up || !wanSample || wanSample.device !== wan.l3_device) { this.traffic = null; this.wanBaseline = null; }
   const captured = metrics.recorded(current('recorded'), wan?.up ? wan.l3_device : null);
+  const recordedMemory = captured && metrics.memory(captured.memory);
   if (captured) {
    this.cpuBusy = captured.cpuBusy; this.cpuHistory = captured.cpuHistory;
-   this.ramHistory = captured.ramHistory; this.ramTime = state.system?.time;
+   if (recordedMemory) this.ramHistory = captured.ramHistory;
    if (captured.history.some(Boolean)) {
     this.history = captured.history; this.traffic = captured.traffic;
    }
    this.cpuBaseline = this.wanBaseline = null;
-   memory = captured.memory;
+   if (recordedMemory) memory = captured.memory;
   }
   const peak = Math.max(1, ...this.history.filter(Boolean).flatMap(sample => [sample.down, sample.up]));
   const trafficMessage = !state.interfaces && !this.failures.interfaces ? _('Collecting network status…')
@@ -198,12 +199,13 @@ return view.extend({
    ])
   ], 'identity');
   const cpuPending = !this.failures.cpu && (!state.cpu || cpu && this.cpuBaseline && !Number.isFinite(this.cpuBusy));
-  const memoryUsed = Number.isFinite(memory.total) && memory.total > 0 && Number.isFinite(memory.available)
-   && memory.available >= 0 && memory.available <= memory.total ? memory.total - memory.available : null;
+  const memoryParts = metrics.memory(memory);
+  const memoryAvailable = Number.isFinite(memory.total) && memory.total > 0 && Number.isFinite(memory.available)
+   && memory.available >= 0 && memory.available <= memory.total ? memory.available : null;
   const disk = this.storage(current('mounts'));
-  if (state.system?.time !== this.ramTime) {
+  if (!recordedMemory && state.system?.time !== this.ramTime) {
    if (this.ramTime && state.system.time - this.ramTime > 30000) this.ramHistory = metrics.append(this.ramHistory, null);
-   this.ramHistory = metrics.append(this.ramHistory, memoryUsed === null ? null : memoryUsed / memory.total * 100);
+   this.ramHistory = metrics.append(this.ramHistory, memoryParts ? { used: memoryParts.usedPercent, cache: memoryParts.cachePercent } : null);
    this.ramTime = state.system?.time;
   }
   const cpuPanel = section(_('CPU usage'), [
@@ -213,10 +215,13 @@ return view.extend({
     : !Number.isFinite(this.cpuBusy) ? _('CPU data unavailable') : _('Collected samples') + (cores ? ' · ' + cores + ' ' + _('cores') : ''))
   ], 'cpu');
   const ramPanel = section(_('RAM usage'), [
-   E('strong', { 'class': 'zc-util-value' }, memoryUsed === null ? '—' : number(memoryUsed / memory.total * 100) + '%'),
-   E('div', { 'class': 'zc-trend-slot' }, this.sparkline(memoryUsed === null ? [] : this.ramHistory, _('Recent RAM usage samples'))),
-   E('p', { 'class': 'zc-note' }, memoryUsed === null ? _('Memory data unavailable')
-    : mib(memory.available) + ' ' + _('available') + ' / ' + mib(memory.total) + ' ' + _('Linux RAM'))
+   E('strong', { 'class': 'zc-util-value' }, memoryParts ? number(memoryParts.occupiedPercent) + '%' : '—'),
+   E('div', { 'class': 'zc-trend-slot' }, this.memoryChart(memoryParts ? this.ramHistory : [])),
+   E('div', { 'class': 'zc-memory-legend' }, [
+    E('span', { 'class': 'zc-memory-key zc-memory-used' }, _('Used') + ' ' + mib(memoryParts?.used)),
+    E('span', { 'class': 'zc-memory-key zc-memory-cache' }, _('File cache') + ' ' + mib(memoryParts?.cache))]),
+   E('p', { 'class': 'zc-note' }, memoryAvailable === null ? _('Memory data unavailable')
+    : mib(memoryAvailable) + ' ' + _('available') + ' / ' + mib(memory.total) + ' ' + _('Linux RAM'))
   ], 'memory');
   deviceInfo.append(E('div', { 'class': 'zc-disk' }, [
    gauge(_('Disk'), disk.percent === null ? '—' : number(disk.percent) + '%', disk.percent,
@@ -348,6 +353,46 @@ return view.extend({
   if (last) {
    const dot = document.createElementNS(ns, 'circle');
    dot.setAttribute('cx', last.x); dot.setAttribute('cy', last.y); dot.setAttribute('r', '1.4'); svg.append(dot);
+  }
+  return E('div', { 'class': 'zc-util-chart' }, [svg,
+   E('div', { 'class': 'zc-util-scale', 'aria-hidden': 'true' }, ['100%', '50%', '0%'].map(value => E('span', {}, value)))]);
+ },
+ memoryChart(samples) {
+  // Stack used RAM excluding file cache, then add file cache; never fill absent samples with zero.
+  samples = samples.filter(sample => sample && [sample.used, sample.cache].every(Number.isFinite)
+   && sample.used >= 0 && sample.cache >= 0 && sample.used + sample.cache <= 100.000001);
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 160 48'); svg.setAttribute('class', 'zc-sparkline zc-memory-sparkline');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', _('Recent used RAM and file cache, stacked from 0 to 100% of Linux RAM. Unfilled space is free RAM.'));
+  const title = document.createElementNS(ns, 'title');
+  title.textContent = _('Collected samples; pauses and unavailable readings are omitted.'); svg.append(title);
+  const path = (kind, d) => {
+   const node = document.createElementNS(ns, 'path');
+   node.setAttribute('class', kind); node.setAttribute('d', d); svg.append(node);
+  };
+  path('zc-spark-grid', 'M0 3 H160 M0 24 H160 M0 45 H160');
+  const points = samples.map((sample, index) => ({
+   x: samples.length > 1 ? index * 160 / (samples.length - 1) : 160,
+   used: 45 - sample.used * .42, cache: 45 - (sample.used + sample.cache) * .42
+  }));
+  // Give the first real sample a narrow filled strip rather than invented history.
+  const areaPoints = points.length === 1 ? [{ ...points[0], x: 158 }, points[0]] : points;
+  const point = (p, key) => p.x.toFixed(1) + ' ' + p[key].toFixed(1);
+  const coordinates = (values, key) => values.map(p => point(p, key)).join(' L');
+  const first = areaPoints[0], last = areaPoints[areaPoints.length - 1];
+  path('zc-memory-area zc-memory-used', first
+   ? 'M' + first.x.toFixed(1) + ' 45 L' + coordinates(areaPoints, 'used') + ' L' + last.x.toFixed(1) + ' 45 Z' : '');
+  path('zc-memory-area zc-memory-cache', first
+   ? 'M' + coordinates(areaPoints, 'cache') + ' L' + coordinates(areaPoints.slice().reverse(), 'used') + ' Z' : '');
+  for (const key of ['used', 'cache']) {
+   path('zc-memory-line zc-memory-' + key, points.length ? 'M' + coordinates(points, key) : '');
+   if (last) {
+    const dot = document.createElementNS(ns, 'circle');
+    dot.setAttribute('class', 'zc-memory-' + key);
+    dot.setAttribute('cx', last.x); dot.setAttribute('cy', last[key]); dot.setAttribute('r', '1.4'); svg.append(dot);
+   }
   }
   return E('div', { 'class': 'zc-util-chart' }, [svg,
    E('div', { 'class': 'zc-util-scale', 'aria-hidden': 'true' }, ['100%', '50%', '0%'].map(value => E('span', {}, value)))]);

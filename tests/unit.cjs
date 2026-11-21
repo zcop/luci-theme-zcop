@@ -13,6 +13,18 @@ const load = name => {
 const metrics = load('metrics'), Scheduler = load('scheduler');
 
 (async () => {
+ const memory = { total: 1000, free: 100, cached: 450, shared: 50, available: 300 };
+ assert.deepEqual(metrics.memory(memory), {total:1000,free:100,cache:400,used:500,occupied:900,usedPercent:50,cachePercent:40,occupiedPercent:90});
+ const shifted = metrics.memory({...memory,free:300,cached:250,available:400});
+ assert.equal(shifted.usedPercent,50,'free/cache rebalance changed non-cache usage');
+ assert.equal(shifted.occupiedPercent,70); assert.equal(shifted.cachePercent,20);
+ assert.equal(shifted.used + shifted.cache + shifted.free, shifted.total, 'cache was counted twice');
+ assert.equal(metrics.memory({...memory,cached:50}).cache,0,'zero file cache was treated as missing');
+ assert.equal(metrics.memory({...memory,free:0,cached:0,shared:0}).used,1000);
+ for (const invalid of [null,{}, {total:1000,available:500}, {...memory,shared:undefined},
+  {...memory,free:-1}, {...memory,cached:10}, {...memory,shared:-1}, {...memory,free:800},
+  {...memory,total:0}, {...memory,free:NaN}, {...memory,cached:Infinity}])
+  assert.equal(metrics.memory(invalid),null,'invalid/missing memory breakdown invented a free/cache reading');
  const cpuInfo = 'processor : 0\nmodel name : ARMv8 Processor rev 4 (v8l)\nCPU architecture: 8\nCPU revision: 4\n';
  assert.deepEqual(metrics.processor(cpuInfo, '0-1\n', '1200000\n', 'fallback'), {architecture:'ARMv8',cores:2,maxKHz:1200000});
  assert.equal(metrics.processor(cpuInfo, '0-1,1,4', '1200000').cores,3);

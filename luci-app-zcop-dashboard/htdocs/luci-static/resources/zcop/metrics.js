@@ -48,6 +48,17 @@ return baseclass.extend({
  append(history, sample) {
   return history.concat([sample]).slice(-60);
  },
+ memory(value) {
+  const { total, free, cached, shared } = value || {};
+  if (![total, free, cached, shared].every(Number.isFinite) || total <= 0
+   || free < 0 || shared < 0 || cached < shared) return null;
+  // Cached includes tmpfs/shmem, which must not be presented as discardable files.
+  const cache = cached - shared;
+  if (free + cache > total) return null;
+  const occupied = total - free, used = occupied - cache;
+  return { total, free, cache, used, occupied, usedPercent: 100 * used / total,
+   cachePercent: 100 * cache / total, occupiedPercent: 100 * occupied / total };
+ },
  recorded(reply, device) {
   if (!Array.isArray(reply?.samples) || !Number.isFinite(reply.now)) return null;
   const samples = reply.samples.slice(-60), latest = samples[samples.length - 1];
@@ -59,10 +70,8 @@ return baseclass.extend({
    const continuous = previous && sample.time > previous.time && sample.time - previous.time <= 15000;
    const busy = continuous ? this.cpuPercent(previous.cpu, sample.cpu) : null;
    cpuHistory.push(Number.isFinite(busy) ? busy : null);
-   const memory = sample.memory;
-   const validMemory = Number.isFinite(memory?.total) && memory.total > 0 && Number.isFinite(memory.available)
-    && memory.available >= 0 && memory.available <= memory.total;
-   ramHistory.push(validMemory ? (memory.total - memory.available) / memory.total * 100 : null);
+   const memory = this.memory(sample.memory);
+   ramHistory.push(memory ? { used: memory.usedPercent, cache: memory.cachePercent } : null);
    const point = entry => entry?.network?.[device] ? { ...entry.network[device], device, time: entry.time } : null;
    history.push(continuous ? this.rate(point(previous), point(sample)) : null);
    previous = sample;
